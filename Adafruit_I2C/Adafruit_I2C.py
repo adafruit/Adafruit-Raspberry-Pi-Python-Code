@@ -18,7 +18,7 @@ class Adafruit_I2C :
     try:
       self.bus.write_byte_data(self.address, reg, value)
       if (self.debug):
-        print("I2C: Wrote 0x%02X to device 0x%02X" % (self.address, reg))
+        print("I2C: Wrote 0x%02X to register 0x%02X" % (value, reg))
     except IOError, err:
       print "Error accessing 0x%02X: Check your I2C address" % self.address
       return -1
@@ -28,7 +28,7 @@ class Adafruit_I2C :
     try:
       result = self.bus.read_byte_data(self.address, reg)
       if (self.debug):
-        print "I2C: Device 0x%02X returned 0x%04X from reg 0x%02X" % (self.address, result & 0xFF, reg)
+        print "I2C: Device 0x%02X returned 0x%02X from reg 0x%02X" % (self.address, result & 0xFF, reg)
       return result
     except IOError, err:
       print "Error accessing 0x%02X: Check your I2C address" % self.address
@@ -39,7 +39,7 @@ class Adafruit_I2C :
     try:
       result = self.bus.read_byte_data(self.address, reg)
       if (self.debug):
-        print "I2C: Device 0x%02X returned 0x%04X from reg 0x%02X" % (self.address, result & 0xFF, reg)
+        print "I2C: Device 0x%02X returned 0x%02X from reg 0x%02X" % (self.address, result & 0xFF, reg)
       if (result > 127):
         return result - 256
       else:
