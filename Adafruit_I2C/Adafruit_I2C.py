@@ -34,11 +34,11 @@ class Adafruit_I2C :
     except IOError, err:
       print "Error accessing 0x%02X: Check your I2C address" % self.address
       return -1
-      
-  def write16(self, reg, value):
-    "Writes 16 bits of data to the specified register/address"
+
+  def writeList(self, reg, list):
+    "Writes an array of bytes using I2C format"
     try:
-      self.bus.write_word_data(self.address, reg, value)
+      self.bus.write_i2c_block_data(self.address, reg, list)
     except IOError, err:
       print "Error accessing 0x%02X: Check your I2C address" % self.address
       return -1
