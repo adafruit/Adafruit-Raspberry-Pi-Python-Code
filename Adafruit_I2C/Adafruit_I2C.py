@@ -13,12 +13,32 @@ class Adafruit_I2C :
     self.bus = bus
     self.debug = debug
 
+  def reverseByteOrder(self, data):
+    "Reverses the byte order of an int (16-bit) or long (32-bit) value"
+    # Courtesy Vishal Sapre
+    dstr = hex(data)[2:].replace('L','')
+    byteCount = len(dstr[::2])
+    val = 0
+    for i, n in enumerate(range(byteCount)):
+      d = data & 0xFF
+      val |= (d << (8 * (byteCount - i - 1)))
+      data >>= 8
+    return val
+
   def write8(self, reg, value):
     "Writes an 8-bit value to the specified register/address"
     try:
       self.bus.write_byte_data(self.address, reg, value)
       if (self.debug):
         print("I2C: Wrote 0x%02X to register 0x%02X" % (value, reg))
+    except IOError, err:
+      print "Error accessing 0x%02X: Check your I2C address" % self.address
+      return -1
+      
+  def write16(self, reg, value):
+    "Writes 16 bits of data to the specified register/address"
+    try:
+      self.bus.write_word_data(self.address, reg, value)
     except IOError, err:
       print "Error accessing 0x%02X: Check your I2C address" % self.address
       return -1
