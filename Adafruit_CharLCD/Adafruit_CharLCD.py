@@ -11,7 +11,7 @@ from time import sleep
 
 class Adafruit_CharLCD:
 
-    def __init__(self, pin_rs=24, pin_e=23, pins_db=[17, 21, 22, 25]):
+    def __init__(self, pin_rs=25, pin_e=24, pins_db=[23, 17, 21, 22]):
 
         self.pin_rs = pin_rs
         self.pin_e = pin_e
@@ -99,5 +99,5 @@ if __name__ == '__main__':
     lcd = Adafruit_CharLCD()
 
     lcd.clear()
-    lcd.message("  Adafruit 16x2\n Standard LCD")
+    lcd.message("  Adafruit 16x2\n  Standard LCD")
 

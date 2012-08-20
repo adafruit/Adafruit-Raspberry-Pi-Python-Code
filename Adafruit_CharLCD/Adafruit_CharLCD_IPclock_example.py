@@ -18,5 +18,5 @@ while 1:
 	lcd.clear()
 	ipaddr = run_cmd(cmd)
 	lcd.message(datetime.now().strftime('%b %d  %H:%M:%S\n'))
-	lcd.message('My IP: %s' % ( ipaddr ) )
+	lcd.message('IP %s' % ( ipaddr ) )
 	sleep(2)
