@@ -30,7 +30,7 @@ class Adafruit_I2C :
     try:
       self.bus.write_byte_data(self.address, reg, value)
       if (self.debug):
-        print("I2C: Wrote 0x%02X to register 0x%02X" % (value, reg))
+        print "I2C: Wrote 0x%02X to register 0x%02X" % (value, reg)
     except IOError, err:
       print "Error accessing 0x%02X: Check your I2C address" % self.address
       return -1
@@ -38,9 +38,25 @@ class Adafruit_I2C :
   def writeList(self, reg, list):
     "Writes an array of bytes using I2C format"
     try:
+      if (self.debug):
+        print "I2C: Writing list to register 0x%02X:" % reg
+        print list
       self.bus.write_i2c_block_data(self.address, reg, list)
     except IOError, err:
       print "Error accessing 0x%02X: Check your I2C address" % self.address
+      return -1
+
+  def readList(self, reg, length):
+    "Read a list of bytes from the I2C device"
+    results = []
+    try:
+      results = self.bus.read_i2c_block_data(self.address, reg, length)
+      if (self.debug):
+        print "I2C: Device 0x%02X returned the following from reg 0x%02X" % (self.address, reg)
+        print results
+      return results
+    except IOError, err:
+      print "Error accessing 09x%02X: Check your I2C address" % self.address
       return -1
 
   def readU8(self, reg):
