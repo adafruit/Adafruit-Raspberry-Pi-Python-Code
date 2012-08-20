@@ -11,6 +11,50 @@ from time import sleep
 
 class Adafruit_CharLCD:
 
+    # commands
+    LCD_CLEARDISPLAY 		= 0x01
+    LCD_RETURNHOME 		= 0x02
+    LCD_ENTRYMODESET 		= 0x04
+    LCD_DISPLAYCONTROL 		= 0x08
+    LCD_CURSORSHIFT 		= 0x10
+    LCD_FUNCTIONSET 		= 0x20
+    LCD_SETCGRAMADDR 		= 0x40
+    LCD_SETDDRAMADDR 		= 0x80
+
+    # flags for display entry mode
+    LCD_ENTRYRIGHT 		= 0x00
+    LCD_ENTRYLEFT 		= 0x02
+    LCD_ENTRYSHIFTINCREMENT 	= 0x01
+    LCD_ENTRYSHIFTDECREMENT 	= 0x00
+
+    # flags for display on/off control
+    LCD_DISPLAYON 		= 0x04
+    LCD_DISPLAYOFF 		= 0x00
+    LCD_CURSORON 		= 0x02
+    LCD_CURSOROFF 		= 0x00
+    LCD_BLINKON 		= 0x01
+    LCD_BLINKOFF 		= 0x00
+
+    # flags for display/cursor shift
+    LCD_DISPLAYMOVE 		= 0x08
+    LCD_CURSORMOVE 		= 0x00
+
+    # flags for display/cursor shift
+    LCD_DISPLAYMOVE 		= 0x08
+    LCD_CURSORMOVE 		= 0x00
+    LCD_MOVERIGHT 		= 0x04
+    LCD_MOVELEFT 		= 0x00
+
+    # flags for function set
+    LCD_8BITMODE 		= 0x10
+    LCD_4BITMODE 		= 0x00
+    LCD_2LINE 			= 0x08
+    LCD_1LINE 			= 0x00
+    LCD_5x10DOTS 		= 0x04
+    LCD_5x8DOTS 		= 0x00
+
+
+
     def __init__(self, pin_rs=25, pin_e=24, pins_db=[23, 17, 21, 22]):
 
         self.pin_rs = pin_rs
@@ -29,23 +73,134 @@ class Adafruit_CharLCD:
 	self.write4bits(0x28) # 2 line 5x7 matrix
 	self.write4bits(0x0C) # turn cursor off 0x0E to enable cursor
 	self.write4bits(0x06) # shift cursor right
+
+	self.displaycontrol = self.LCD_DISPLAYON | self.LCD_CURSOROFF | self.LCD_BLINKOFF
+
+	self.displayfunction = self.LCD_4BITMODE | self.LCD_1LINE | self.LCD_5x8DOTS
+	self.displayfunction |= self.LCD_2LINE
+
+	""" Initialize to default text direction (for romance languages) """
+	self.displaymode =  self.LCD_ENTRYLEFT | self.LCD_ENTRYSHIFTDECREMENT
+	self.write4bits(self.LCD_ENTRYMODESET | self.displaymode) #  set the entry mode
+
         self.clear()
+
+
+    def begin(self, cols, lines):
+
+	if (lines > 1):
+		self.numlines = lines
+    		self.displayfunction |= self.LCD_2LINE
+		self.currline = 0
+
+
+    def home(self):
+
+	self.write4bits(self.LCD_RETURNHOME) # set cursor position to zero
+	self.delayMicroseconds(2000) # this command takes a long time!
 	
 
     def clear(self):
 
-	self.write4bits(0x01) # command to clear display
+	self.write4bits(self.LCD_CLEARDISPLAY) # command to clear display
+	self.delayMicroseconds(2000)	# 2000 microsecond sleep, clearing the display takes a long time
 
-	# 2000 microsecond sleep, clearing the display takes a long time
-	sleep(.002)
-	#self.delayMicroseconds(2000)
+
+    def setCursor(self, col, row):
+
+	self.row_offsets = [ 0x00, 0x40, 0x14, 0x54 ]
+
+	if ( row > self.numlines ): 
+		row = self.numlines - 1 # we count rows starting w/0
+
+	self.write4bits(self.LCD_SETDDRAMADDR | (col + self.row_offsets[row]))
+
+
+    def noDisplay(self): 
+	""" Turn the display off (quickly) """
+
+	self.displaycontrol &= ~self.LCD_DISPLAYON
+	self.write4bits(self.LCD_DISPLAYCONTROL | self.displaycontrol)
+
+
+    def display(self):
+	""" Turn the display on (quickly) """
+
+	self.displaycontrol |= self.LCD_DISPLAYON
+	self.write4bits(self.LCD_DISPLAYCONTROL | self.displaycontrol)
+
+
+    def noCursor(self):
+	""" Turns the underline cursor on/off """
+
+	self.displaycontrol &= ~self.LCD_CURSORON
+	self.write4bits(self.LCD_DISPLAYCONTROL | self.displaycontrol)
+
+
+    def cursor(self):
+	""" Cursor On """
+
+	self.displaycontrol |= self.LCD_CURSORON
+	self.write4bits(self.LCD_DISPLAYCONTROL | self.displaycontrol)
+
+
+    def noBlink(self):
+	""" Turn on and off the blinking cursor """
+
+	self.displaycontrol &= ~self.LCD_BLINKON
+	self.write4bits(self.LCD_DISPLAYCONTROL | self.displaycontrol)
+
+
+    def noBlink(self):
+	""" Turn on and off the blinking cursor """
+
+	self.displaycontrol &= ~self.LCD_BLINKON
+	self.write4bits(self.LCD_DISPLAYCONTROL | self.displaycontrol)
+
+
+    def DisplayLeft(self):
+	""" These commands scroll the display without changing the RAM """
+
+	self.write4bits(self.LCD_CURSORSHIFT | self.LCD_DISPLAYMOVE | self.LCD_MOVELEFT)
+
+
+    def scrollDisplayRight(self):
+	""" These commands scroll the display without changing the RAM """
+
+	self.write4bits(self.LCD_CURSORSHIFT | self.LCD_DISPLAYMOVE | self.LCD_MOVERIGHT);
+
+
+    def leftToRight(self):
+	""" This is for text that flows Left to Right """
+
+	self.displaymode |= self.LCD_ENTRYLEFT
+	self.write4bits(self.LCD_ENTRYMODESET | self.displaymode);
+
+
+    def rightToLeft(self):
+	""" This is for text that flows Right to Left """
+	self.displaymode &= ~self.LCD_ENTRYLEFT
+	self.write4bits(self.LCD_ENTRYMODESET | self.displaymode)
+
+
+    def autoscroll(self):
+	""" This will 'right justify' text from the cursor """
+
+	self.displaymode |= self.LCD_ENTRYSHIFTINCREMENT
+	self.write4bits(self.LCD_ENTRYMODESET | self.displaymode)
+
+
+    def noAutoscroll(self): 
+	""" This will 'left justify' text from the cursor """
+
+	self.displaymode &= ~self.LCD_ENTRYSHIFTINCREMENT
+	self.write4bits(self.LCD_ENTRYMODESET | self.displaymode)
+
 
     def write4bits(self, bits, char_mode=False):
         """ Send command to LCD """
 
-	# 1000 microseconds sleep
-	# sleep(.001)
-	self.delayMicroseconds(1000)
+	self.delayMicroseconds(1000) # 1000 microsecond sleep
 
         bits=bin(bits)[2:].zfill(8)
 
