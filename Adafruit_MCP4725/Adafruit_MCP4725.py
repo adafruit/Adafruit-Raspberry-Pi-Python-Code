@@ -30,6 +30,6 @@ class MCP4725 :
     # Value needs to be left-shifted four bytes for the MCP4725
     bytes = [(voltage >> 4) & 0xFF, (voltage << 4) & 0xFF]
     if (persist):
-      self.i2c.writeList(self.__REG_WRITEDACEEPROM, self.i2c.reverseByteOrder(voltage))
+      self.i2c.writeList(self.__REG_WRITEDACEEPROM, bytes)
     else:
       self.i2c.writeList(self.__REG_WRITEDAC, bytes)
