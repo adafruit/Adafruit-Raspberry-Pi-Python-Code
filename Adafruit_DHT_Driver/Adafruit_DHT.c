@@ -125,7 +125,7 @@ int readDHT(int type, int pin) {
 	h = data[0] * 256 + data[1];
 	h /= 10;
 
-	f = (data[2] & 0x7F)* 256; +  data[3];
+	f = (data[2] & 0x7F)* 256 + data[3];
         f /= 10.0;
         if (data[2] & 0x80)  f *= -1;
 	printf("Temp =  %.1f *C, Hum = %.1f \%\n", f, h);
