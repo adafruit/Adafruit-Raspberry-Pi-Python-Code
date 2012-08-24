@@ -24,7 +24,6 @@
 #include <bcm2835.h>
 #include <unistd.h>
 
-#define DHTPIN RPI_GPIO_P1_07
 #define MAXTIMINGS 100
 
 #define DHT11 11
@@ -38,20 +37,30 @@ int main(int argc, char **argv)
   if (!bcm2835_init())
         return 1;
 
-  if (argc != 2) {
-	printf("usage: %s [11|22|2302]\n", argv[0]);
+  if (argc != 3) {
+	printf("usage: %s [11|22|2302] GPIOpin#\n", argv[0]);
+	printf("example: %s 2302 4 - Read from an AM2302 connected to GPIO #4\n", argv[0]);
 	return 2;
   }
   int type = 0;
   if (strcmp(argv[1], "11") == 0) type = DHT11;
   if (strcmp(argv[1], "22") == 0) type = DHT22;
-  if (strcmp(argv[1], "2303") == 0) type = AM2302;
+  if (strcmp(argv[1], "2302") == 0) type = AM2302;
   if (type == 0) {
 	printf("Select 11, 22, 2303 as type!\n");
 	return 3;
   }
+  
+  int dhtpin = atoi(argv[2]);
 
-  readDHT(type, DHTPIN);
+  if (dhtpin <= 0) {
+	printf("Please select a valid GPIO pin #\n");
+	return 3;
+  }
+
+
+  printf("Using pin #%d\n", dhtpin);
+  readDHT(type, dhtpin);
   return 0;
 
 } // main
