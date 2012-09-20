@@ -97,13 +97,13 @@ class Adafruit_CharLCD:
     def home(self):
 
 	self.write4bits(self.LCD_RETURNHOME) # set cursor position to zero
-	self.delayMicroseconds(2000) # this command takes a long time!
+	self.delayMicroseconds(3000) # this command takes a long time!
 	
 
     def clear(self):
 
 	self.write4bits(self.LCD_CLEARDISPLAY) # command to clear display
-	self.delayMicroseconds(2000)	# 2000 microsecond sleep, clearing the display takes a long time
+	self.delayMicroseconds(3000)	# 3000 microsecond sleep, clearing the display takes a long time
 
 
     def setCursor(self, col, row):
