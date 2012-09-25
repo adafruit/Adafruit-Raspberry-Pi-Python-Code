@@ -47,7 +47,7 @@ int main(int argc, char **argv)
   if (strcmp(argv[1], "22") == 0) type = DHT22;
   if (strcmp(argv[1], "2302") == 0) type = AM2302;
   if (type == 0) {
-	printf("Select 11, 22, 2303 as type!\n");
+	printf("Select 11, 22, 2302 as type!\n");
 	return 3;
   }
   
