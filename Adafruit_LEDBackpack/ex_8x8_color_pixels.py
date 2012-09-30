@@ -17,15 +17,7 @@ iter = 0
 while(True):
   iter += 1
 
-  print (iter % 4)
-
   for x in range(0, 8):
     for y in range(0, 8):
-      grid.setPixel(x, y, iter%4 )
+      grid.setPixel(x, y, iter % 4 )
       time.sleep(0.02)
-
-# I think there is another bug here that drawing red or green after yellow doesn't clear the other component until you draw a blank
-
-#  time.sleep(0.5)
-#  grid.clear()
-#  time.sleep(0.5)
