@@ -6,7 +6,6 @@
 # LiquidCrystal - https://github.com/arduino/Arduino/blob/master/libraries/LiquidCrystal/LiquidCrystal.cpp
 #
 
-import RPi.GPIO as GPIO
 from time import sleep
 
 class Adafruit_CharLCD:
@@ -55,18 +54,22 @@ class Adafruit_CharLCD:
 
 
 
-    def __init__(self, pin_rs=25, pin_e=24, pins_db=[23, 17, 21, 22]):
-
+    def __init__(self, pin_rs=25, pin_e=24, pins_db=[23, 17, 21, 22], GPIO = None):
+	# Emulate the old behavior of using RPi.GPIO if we haven't been given
+	# an explicit GPIO interface to use
+	if not GPIO:
+	    import RPi.GPIO as GPIO
+   	self.GPIO = GPIO
         self.pin_rs = pin_rs
         self.pin_e = pin_e
         self.pins_db = pins_db
 
-        GPIO.setmode(GPIO.BCM)
-        GPIO.setup(self.pin_e, GPIO.OUT)
-        GPIO.setup(self.pin_rs, GPIO.OUT)
+        self.GPIO.setmode(GPIO.BCM)
+        self.GPIO.setup(self.pin_e, GPIO.OUT)
+        self.GPIO.setup(self.pin_rs, GPIO.OUT)
 
         for pin in self.pins_db:
-            GPIO.setup(pin, GPIO.OUT)
+            self.GPIO.setup(pin, GPIO.OUT)
 
 	self.write4bits(0x33) # initialization
 	self.write4bits(0x32) # initialization
@@ -204,23 +207,23 @@ class Adafruit_CharLCD:
 
         bits=bin(bits)[2:].zfill(8)
 
-        GPIO.output(self.pin_rs, char_mode)
+        self.GPIO.output(self.pin_rs, char_mode)
 
         for pin in self.pins_db:
-            GPIO.output(pin, False)
+            self.GPIO.output(pin, False)
 
         for i in range(4):
             if bits[i] == "1":
-                GPIO.output(self.pins_db[::-1][i], True)
+                self.GPIO.output(self.pins_db[::-1][i], True)
 
 	self.pulseEnable()
 
         for pin in self.pins_db:
-            GPIO.output(pin, False)
+            self.GPIO.output(pin, False)
 
         for i in range(4,8):
             if bits[i] == "1":
-                GPIO.output(self.pins_db[::-1][i-4], True)
+                self.GPIO.output(self.pins_db[::-1][i-4], True)
 
 	self.pulseEnable()
 
@@ -231,11 +234,11 @@ class Adafruit_CharLCD:
 
 
     def pulseEnable(self):
-	GPIO.output(self.pin_e, False)
+	self.GPIO.output(self.pin_e, False)
 	self.delayMicroseconds(1)		# 1 microsecond pause - enable pulse must be > 450ns 
-	GPIO.output(self.pin_e, True)
+	self.GPIO.output(self.pin_e, True)
 	self.delayMicroseconds(1)		# 1 microsecond pause - enable pulse must be > 450ns 
-	GPIO.output(self.pin_e, False)
+	self.GPIO.output(self.pin_e, False)
 	self.delayMicroseconds(1)		# commands need > 37us to settle
 
 
