@@ -21,10 +21,13 @@
 #include <sys/mman.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/time.h>
 #include <bcm2835.h>
 #include <unistd.h>
 
 #define MAXTIMINGS 100
+
+//#define DEBUG
 
 #define DHT11 11
 #define DHT22 22
@@ -76,30 +79,38 @@ int readDHT(int type, int pin) {
 
   // Set GPIO pin to output
   bcm2835_gpio_fsel(pin, BCM2835_GPIO_FSEL_OUTP);
+
   bcm2835_gpio_write(pin, HIGH);
-  usleep(100);
+  usleep(500000);  // 500 ms
   bcm2835_gpio_write(pin, LOW);
   usleep(20000);
+
   bcm2835_gpio_fsel(pin, BCM2835_GPIO_FSEL_INPT);
 
   data[0] = data[1] = data[2] = data[3] = data[4] = 0;
+
+  // wait for pin to drop?
+  while (bcm2835_gpio_lev(pin) == 1) {
+    usleep(1);
+  }
+
   // read data!
   for (int i=0; i< MAXTIMINGS; i++) {
     counter = 0;
     while ( bcm2835_gpio_lev(pin) == laststate) {
 	counter++;
-	nanosleep(1);		// overclocking might change this?
-        if (counter == 100)
+	//nanosleep(1);		// overclocking might change this?
+        if (counter == 1000)
 	  break;
     }
     laststate = bcm2835_gpio_lev(pin);
-    if (counter == 100) break;
+    if (counter == 1000) break;
     bits[bitidx++] = counter;
 
     if ((i>3) && (i%2 == 0)) {
       // shove each bit into the storage bytes
       data[j/8] <<= 1;
-      if (counter > 16)
+      if (counter > 200)
         data[j/8] |= 1;
       j++;
     }
@@ -109,7 +120,7 @@ int readDHT(int type, int pin) {
 #ifdef DEBUG
   for (int i=3; i<bitidx; i+=2) {
     printf("bit %d: %d\n", i-3, bits[i]);
-    printf("bit %d: %d (%d)\n", i-2, bits[i+1], bits[i+1] > 15);
+    printf("bit %d: %d (%d)\n", i-2, bits[i+1], bits[i+1] > 200);
   }
 #endif
 
