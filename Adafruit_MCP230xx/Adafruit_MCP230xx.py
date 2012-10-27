@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-# Copyright 2012 Daniel Berlin
+# Copyright 2012 Daniel Berlin (with some changes by Adafruit Industries/Limor Fried)
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy of
 # this software and associated documentation files (the "Software"), to deal  MCP230XX_GPIO(1, 0xin
@@ -43,7 +43,7 @@ class Adafruit_MCP230XX(object):
 
     def __init__(self, busnum, address, num_gpios):
         assert num_gpios >= 0 and num_gpios <= 16, "Number of GPIOs must be between 0 and 16"
-        self.i2c = Adafruit_I2C(address, smbus.SMBus(busnum), True)
+        self.i2c = Adafruit_I2C(address, smbus.SMBus(busnum))
         self.address = address
         self.num_gpios = num_gpios
 
