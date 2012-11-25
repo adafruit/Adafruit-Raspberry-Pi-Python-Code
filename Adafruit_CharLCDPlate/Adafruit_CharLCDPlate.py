@@ -11,12 +11,23 @@ from Adafruit_I2C import Adafruit_I2C
 from Adafruit_MCP230xx import Adafruit_MCP230XX
 import smbus
 
-OUTPUT = 0
-INPUT = 1
+# change busnum = 0 to bbusnum = 1 if you have a rev 2 Pi!
 mcp = Adafruit_MCP230XX(busnum = 0, address = 0x20, num_gpios = 16)
 
-
 class Adafruit_CharLCD:
+
+    OUTPUT = 0
+    INPUT = 1
+    
+    # LED colors
+    RED = 0x01
+    GREEN = 0x02
+    BLUE = 0x04
+    YELLOW = 0x03
+    TEAL = 0x06
+    VIOLET = 0x05
+    ON = 0x07
+    OFF = 0x0
 
     # commands
     LCD_CLEARDISPLAY     	= 0x01
@@ -68,14 +79,14 @@ class Adafruit_CharLCD:
         self.pin_rw = pin_rw
         self.pins_db = pins_db
 
-        mcp.config(self.pin_e, OUTPUT)
-        mcp.config(self.pin_rs,  OUTPUT)
-        mcp.config(self.pin_rw,  OUTPUT)
+        mcp.config(self.pin_e, self.OUTPUT)
+        mcp.config(self.pin_rs,  self.OUTPUT)
+        mcp.config(self.pin_rw,  self.OUTPUT)
         mcp.output(self.pin_rw, 0)
         mcp.output(self.pin_e, 0)
         
         for pin in self.pins_db:
-            mcp.config(pin,  OUTPUT)
+            mcp.config(pin,  self.OUTPUT)
 
 	self.write4bits(0x33) # initialization
 	self.write4bits(0x32) # initialization
@@ -91,6 +102,14 @@ class Adafruit_CharLCD:
 	""" Initialize to default text direction (for romance languages) """
 	self.displaymode =  self.LCD_ENTRYLEFT | self.LCD_ENTRYSHIFTDECREMENT
 	self.write4bits(self.LCD_ENTRYMODESET | self.displaymode) #  set the entry mode
+
+	# turn on backlights!
+    	mcp.config(6, mcp.OUTPUT)
+    	mcp.config(7, mcp.OUTPUT)
+    	mcp.config(8, mcp.OUTPUT)
+    	mcp.output(6, 0) # red
+    	mcp.output(7, 0) # green 
+    	mcp.output(8, 0) # blue
 
 
     def begin(self, cols, lines):
@@ -211,6 +230,10 @@ class Adafruit_CharLCD:
             else:
                 self.write4bits(ord(char),True)
 
+    def backlight(self, color):
+	mcp.output(6, not color & 0x01)
+	mcp.output(7, not color & 0x02)
+	mcp.output(8, not color & 0x04)
 
 
 if __name__ == '__main__':
@@ -222,29 +245,25 @@ if __name__ == '__main__':
 #    while (True):
 #        for i in range(16):
 #           print "%d: %x" % (i, mcp.input(i) >> i)
-    mcp.config(6, OUTPUT)
-    mcp.config(7, OUTPUT)
-    mcp.config(8, OUTPUT)
-    mcp.output(6, 0) # red
-    mcp.output(7, 0) # green 
-    mcp.output(8, 0) # blue
 
     lcd = Adafruit_CharLCD(15, 13, [12,11,10,9], 14)
     lcd.clear()
     lcd.message("Adafruit RGB LCD\nPlate w/Keypad!")
+    sleep(1)
     while 1:
-		mcp.output(6, 0) # red
-		mcp.output(7, 1) # green 
-		mcp.output(8, 1) # blue
-		sleep(1)
-		mcp.output(7, 0) # green 
-		sleep(1)
-		mcp.output(6, 1) # red
-		sleep(1)
-		mcp.output(8, 0) # blue
-		sleep(1)
-		mcp.output(7, 1) # green 
-		sleep(1)
-		mcp.output(6, 0) # red
-		sleep(1)
-    
+	lcd.backlight(lcd.RED)
+	sleep(1)
+	lcd.backlight(lcd.YELLOW)
+	sleep(1)
+	lcd.backlight(lcd.GREEN)
+	sleep(1)
+	lcd.backlight(lcd.TEAL)
+	sleep(1)
+	lcd.backlight(lcd.BLUE)
+	sleep(1)
+	lcd.backlight(lcd.VIOLET)
+	sleep(1)
+	lcd.backlight(lcd.ON)
+	sleep(1)
+	lcd.backlight(lcd.OFF)
+	sleep(1)
