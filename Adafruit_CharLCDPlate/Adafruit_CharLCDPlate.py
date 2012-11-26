@@ -29,6 +29,13 @@ class Adafruit_CharLCD:
     ON = 0x07
     OFF = 0x0
 
+    # buttons
+    SELECT = 0
+    RIGHT = 1
+    DOWN = 2
+    UP = 3
+    LEFT = 4
+
     # commands
     LCD_CLEARDISPLAY     	= 0x01
     LCD_RETURNHOME 		= 0x02
@@ -111,6 +118,17 @@ class Adafruit_CharLCD:
     	mcp.output(7, 0) # green 
     	mcp.output(8, 0) # blue
 
+	# turn on pullups
+        mcp.pullup(self.SELECT, True)
+        mcp.pullup(self.LEFT, True)
+        mcp.pullup(self.RIGHT, True)
+        mcp.pullup(self.UP, True)
+        mcp.pullup(self.DOWN, True)
+	mcp.config(self.SELECT, mcp.INPUT)
+	mcp.config(self.LEFT, mcp.INPUT)
+	mcp.config(self.RIGHT, mcp.INPUT)
+	mcp.config(self.DOWN, mcp.INPUT)
+	mcp.config(self.UP, mcp.INPUT)
 
     def begin(self, cols, lines):
         if (lines > 1):
@@ -250,6 +268,23 @@ if __name__ == '__main__':
     lcd.clear()
     lcd.message("Adafruit RGB LCD\nPlate w/Keypad!")
     sleep(1)
+    while 1:
+	if (not mcp.input(lcd.LEFT)):
+		lcd.backlight(lcd.RED)
+
+	if (not mcp.input(lcd.UP)):
+		lcd.backlight(lcd.BLUE)
+
+	if (not mcp.input(lcd.DOWN)):
+		lcd.backlight(lcd.GREEN)
+
+	if (not mcp.input(lcd.RIGHT)):
+		lcd.backlight(lcd.VIOLET)
+
+	if (not mcp.input(lcd.SELECT)):
+		lcd.backlight(lcd.ON)
+
+
     while 1:
 	lcd.backlight(lcd.RED)
 	sleep(1)
