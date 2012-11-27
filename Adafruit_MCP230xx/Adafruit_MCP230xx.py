@@ -36,10 +36,10 @@ MCP23017_GPPUB = 0x0D
 MCP23017_OLATA = 0x14
 MCP23017_OLATB = 0x15
 
-OUTPUT = 0
-INPUT = 1
-    
 class Adafruit_MCP230XX(object):
+    OUTPUT = 0
+    INPUT = 1
+    
 
     def __init__(self, busnum, address, num_gpios):
         assert num_gpios >= 0 and num_gpios <= 16, "Number of GPIOs must be between 0 and 16"
