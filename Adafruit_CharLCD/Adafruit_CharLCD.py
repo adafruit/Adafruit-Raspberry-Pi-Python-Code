@@ -229,7 +229,7 @@ class Adafruit_CharLCD:
 
 
     def delayMicroseconds(self, microseconds):
-	seconds = microseconds / 1000000	# divide microseconds by 1 million for seconds
+	seconds = microseconds / float(1000000)	# divide microseconds by 1 million for seconds
 	sleep(seconds)
 
 
