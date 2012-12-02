@@ -56,7 +56,7 @@ class Adafruit_I2C :
         print results
       return results
     except IOError, err:
-      print "Error accessing 09x%02X: Check your I2C address" % self.address
+      print "Error accessing 0x%02X: Check your I2C address" % self.address
       return -1
 
   def readU8(self, reg):
