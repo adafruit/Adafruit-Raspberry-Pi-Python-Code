@@ -22,7 +22,11 @@ class Adafruit_I2C :
  
   def __init__(self, address, bus=smbus.SMBus(1 if getPiRevision() > 1 else 0), debug=False):
     self.address = address
+	# By default, the correct I2C bus is auto-detected using /proc/cpuinfo
     self.bus = bus
+	# Alternatively, you can hard-code the bus version below:
+	# self.bus = smbus.SMBus(0); # Force I2C0 (early 256MB Pi's)
+    # self.bus = smbus.SMBus(1); # Force I2C1 (512MB Pi's)
     self.debug = debug
 
   def reverseByteOrder(self, data):
