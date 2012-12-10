@@ -41,14 +41,13 @@ class Adafruit_MCP230XX(object):
     INPUT = 1
     
 
-    def __init__(self, busnum, address, num_gpios):
+    def __init__(self, address, num_gpios):
         assert num_gpios >= 0 and num_gpios <= 16, "Number of GPIOs must be between 0 and 16"
-        self.i2c = Adafruit_I2C(address, smbus.SMBus(busnum))
+        self.i2c = Adafruit_I2C(address)
         self.address = address
         self.num_gpios = num_gpios
 
         # set defaults
-
         if num_gpios <= 8:
             self.i2c.write8(MCP23008_IODIRA, 0xFF)  # all inputs on port A
             self.direction = self.i2c.readU8(MCP23008_IODIRA)
@@ -152,15 +151,12 @@ class MCP230XX_GPIO(object):
         
 
 if __name__ == '__main__':
-    # Use busnum = 0 for older Raspberry Pi's (pre 512MB)
-    mcp = Adafruit_MCP230XX(busnum = 0, address = 0x20, num_gpios = 16)
-    # Use busnum = 1 for new Raspberry Pi's (512MB)
-    # mcp = Adafruit_MCP230XX(busnum = 1, address = 0x20, num_gpios = 16)
+    mcp = Adafruit_MCP230XX(address = 0x20, num_gpios = 16)
 	
 	# Set pins 0, 1 and 2 to output (you can set pins 0..15 this way)
-    mcp.config(0, OUTPUT)
-    mcp.config(1, OUTPUT)
-    mcp.config(2, OUTPUT)
+    mcp.config(0, mcp.OUTPUT)
+    mcp.config(1, mcp.OUTPUT)
+    mcp.config(2, mcp.OUTPUT)
 	
 	# Set pin 3 to input with the pullup resistor enabled
     mcp.pullup(3, 1)
