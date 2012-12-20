@@ -126,7 +126,35 @@ class Adafruit_MCP230XX(object):
             value |= temp
         return value & (1 << pin)
 
-        
+	def readU8(self):
+		result = self.i2c.readU8(MCP23017_OLATA)
+		return(result)
+
+	def readS8(self):
+		result = self.i2c.readU8(MCP23017_OLATA)
+		if (result > 127): result -= 256
+		return result
+
+	def readU16(self):
+		assert self.num_gpios >= 16, "16bits required"
+		lo = self.i2c.readU8(MCP23017_OLATA)
+		hi = self.i2c.readU8(MCP23017_OLATB)
+		return((hi << 8) | lo)
+
+	def readS16(self):
+		assert self.num_gpios >= 16, "16bits required"
+		lo = self.i2c.readU8(MCP23017_OLATA)
+		hi = self.i2c.readU8(MCP23017_OLATB)
+		if (hi > 127): hi -= 256
+		return((hi << 8) | lo)
+
+	def write8(self, value):
+		self.i2c.write8(MCP23017_OLATA, value)
+
+	def write16(self, value):
+		assert self.num_gpios >= 16, "16bits required"
+		self.i2c.write8(MCP23017_OLATA, value & 0xFF)
+		self.i2c.write8(MCP23017_OLATB, (value >> 8) & 0xFF)        
 
 # RPi.GPIO compatible interface for MCP23017 and MCP23008
 
