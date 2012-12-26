@@ -11,9 +11,8 @@ from Adafruit_I2C import Adafruit_I2C
 from Adafruit_MCP230xx import Adafruit_MCP230XX
 import smbus
 
-mcp = Adafruit_MCP230XX(address = 0x20, num_gpios = 16)
 
-class Adafruit_CharLCD:
+class Adafruit_CharLCDPlate:
 
     OUTPUT = 0
     INPUT = 1
@@ -79,20 +78,23 @@ class Adafruit_CharLCD:
 
 
 
-    def __init__(self, pin_rs=25, pin_e=24, pins_db=[23, 17, 21, 22], pin_rw=0):
+
+    def __init__(self, busnum=0, pin_rs=15, pin_e=13, pins_db=[12, 11, 10, 9], pin_rw=14):
         self.pin_rs = pin_rs
         self.pin_e = pin_e
         self.pin_rw = pin_rw
         self.pins_db = pins_db
 
-        mcp.config(self.pin_e, self.OUTPUT)
-        mcp.config(self.pin_rs,  self.OUTPUT)
-        mcp.config(self.pin_rw,  self.OUTPUT)
-        mcp.output(self.pin_rw, 0)
-        mcp.output(self.pin_e, 0)
+	self.mcp = Adafruit_MCP230XX(busnum = busnum, address = 0x20, num_gpios = 16)
+
+        self.mcp.config(self.pin_e, self.OUTPUT)
+        self.mcp.config(self.pin_rs,  self.OUTPUT)
+        self.mcp.config(self.pin_rw,  self.OUTPUT)
+        self.mcp.output(self.pin_rw, 0)
+        self.mcp.output(self.pin_e, 0)
         
         for pin in self.pins_db:
-            mcp.config(pin,  self.OUTPUT)
+            self.mcp.config(pin,  self.OUTPUT)
 
 	self.write4bits(0x33) # initialization
 	self.write4bits(0x32) # initialization
@@ -110,24 +112,24 @@ class Adafruit_CharLCD:
 	self.write4bits(self.LCD_ENTRYMODESET | self.displaymode) #  set the entry mode
 
 	# turn on backlights!
-    	mcp.config(6, mcp.OUTPUT)
-    	mcp.config(7, mcp.OUTPUT)
-    	mcp.config(8, mcp.OUTPUT)
-    	mcp.output(6, 0) # red
-    	mcp.output(7, 0) # green 
-    	mcp.output(8, 0) # blue
+    	self.mcp.config(6, self.mcp.OUTPUT)
+    	self.mcp.config(7, self.mcp.OUTPUT)
+    	self.mcp.config(8, self.mcp.OUTPUT)
+    	self.mcp.output(6, 0) # red
+    	self.mcp.output(7, 0) # green 
+    	self.mcp.output(8, 0) # blue
 
 	# turn on pullups
-        mcp.pullup(self.SELECT, True)
-        mcp.pullup(self.LEFT, True)
-        mcp.pullup(self.RIGHT, True)
-        mcp.pullup(self.UP, True)
-        mcp.pullup(self.DOWN, True)
-	mcp.config(self.SELECT, mcp.INPUT)
-	mcp.config(self.LEFT, mcp.INPUT)
-	mcp.config(self.RIGHT, mcp.INPUT)
-	mcp.config(self.DOWN, mcp.INPUT)
-	mcp.config(self.UP, mcp.INPUT)
+        self.mcp.pullup(self.SELECT, True)
+        self.mcp.pullup(self.LEFT, True)
+        self.mcp.pullup(self.RIGHT, True)
+        self.mcp.pullup(self.UP, True)
+        self.mcp.pullup(self.DOWN, True)
+	self.mcp.config(self.SELECT, self.mcp.INPUT)
+	self.mcp.config(self.LEFT, self.mcp.INPUT)
+	self.mcp.config(self.RIGHT, self.mcp.INPUT)
+	self.mcp.config(self.DOWN, self.mcp.INPUT)
+	self.mcp.config(self.UP, self.mcp.INPUT)
 
     def begin(self, cols, lines):
         if (lines > 1):
@@ -213,20 +215,20 @@ class Adafruit_CharLCD:
         """ Send command to LCD """
         #self.delayMicroseconds(1000) # 1000 microsecond sleep
         bits=bin(bits)[2:].zfill(8)
-        mcp.output(self.pin_rs, char_mode)
+        self.mcp.output(self.pin_rs, char_mode)
 
         for i in range(4):
             if bits[i] == "1":
-                mcp.output(self.pins_db[::-1][i], True)
+                self.mcp.output(self.pins_db[::-1][i], True)
             else:
-                mcp.output(self.pins_db[::-1][i], False)
+                self.mcp.output(self.pins_db[::-1][i], False)
         self.pulseEnable()
 
         for i in range(4,8):
             if bits[i] == "1":
-                mcp.output(self.pins_db[::-1][i-4], True)
+                self.mcp.output(self.pins_db[::-1][i-4], True)
             else:
-                mcp.output(self.pins_db[::-1][i-4], False)
+                self.mcp.output(self.pins_db[::-1][i-4], False)
         self.pulseEnable()
 
     def delayMicroseconds(self, microseconds):
@@ -234,9 +236,9 @@ class Adafruit_CharLCD:
         sleep(seconds)
 
     def pulseEnable(self):
-        mcp.output(self.pin_e, True)
+        self.mcp.output(self.pin_e, True)
         self.delayMicroseconds(1)		# 1 microsecond pause - enable pulse must be > 450ns 
-        mcp.output(self.pin_e, False)
+        self.mcp.output(self.pin_e, False)
         #self.delayMicroseconds(1)		# commands need > 37us to settle
 
     def message(self, text):
@@ -248,28 +250,20 @@ class Adafruit_CharLCD:
                 self.write4bits(ord(char),True)
 
     def backlight(self, color):
-	mcp.output(6, not color & 0x01)
-	mcp.output(7, not color & 0x02)
-	mcp.output(8, not color & 0x04)
+	self.mcp.output(6, not color & 0x01)
+	self.mcp.output(7, not color & 0x02)
+	self.mcp.output(8, not color & 0x04)
 
     def buttonPressed(self, buttonname):
 	if (buttonname > self.LEFT): 
 		return false
 
-	return not mcp.input(buttonname)
+	return not self.mcp.input(buttonname)
 
 
 if __name__ == '__main__':
 
-
-    # input test
-#    for i in range(16):
-#        mcp.pullup(i, 1)
-#    while (True):
-#        for i in range(16):
-#           print "%d: %x" % (i, mcp.input(i) >> i)
-
-    lcd = Adafruit_CharLCD(15, 13, [12,11,10,9], 14)
+    lcd = Adafruit_CharLCDPlate(busnum = 0)
     lcd.clear()
     lcd.message("Adafruit RGB LCD\nPlate w/Keypad!")
     sleep(1)

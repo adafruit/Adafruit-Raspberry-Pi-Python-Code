@@ -1,22 +1,17 @@
-#!/usr/bin/pythonhttp://raspberrypi.local/editor
-
-#
-# based on code from lrvick and LiquidCrystal
-# lrvic - https://github.com/lrvick/raspi-hd44780/blob/master/hd44780.py
-# LiquidCrystal - https://github.com/arduino/Arduino/blob/master/libraries/LiquidCrystal/LiquidCrystal.cpp
-#
+#!/usr/bin/python
 
 from time import sleep
 from Adafruit_I2C import Adafruit_I2C
 from Adafruit_MCP230xx import Adafruit_MCP230XX
-from Adafruit_CharLCDPlate import Adafruit_CharLCD
+from Adafruit_CharLCDPlate import Adafruit_CharLCDPlate
 
 import smbus
 
 
-# initialize the LCD (the pins are 'fixed', dont change the numbers!)
+# initialize the LCD plate
+# use busnum = 0 for raspi version 1 (256MB) and busnum = 1 for version 2
+lcd = Adafruit_CharLCDPlate(busnum = 0)
 
-lcd = Adafruit_CharLCD(15, 13, [12,11,10,9], 14)
 # clear display
 lcd.clear()
 # hello!
