@@ -11,8 +11,7 @@ from Adafruit_I2C import Adafruit_I2C
 from Adafruit_MCP230xx import Adafruit_MCP230XX
 import smbus
 
-# change busnum = 0 to bbusnum = 1 if you have a rev 2 Pi!
-mcp = Adafruit_MCP230XX(busnum = 0, address = 0x20, num_gpios = 16)
+mcp = Adafruit_MCP230XX(address = 0x20, num_gpios = 16)
 
 class Adafruit_CharLCD:
 
