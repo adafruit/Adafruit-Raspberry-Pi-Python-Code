@@ -252,6 +252,12 @@ class Adafruit_CharLCD:
 	mcp.output(7, not color & 0x02)
 	mcp.output(8, not color & 0x04)
 
+    def buttonPressed(self, buttonname):
+	if (buttonname > self.LEFT): 
+		return false
+
+	return not mcp.input(buttonname)
+
 
 if __name__ == '__main__':
 
@@ -268,19 +274,19 @@ if __name__ == '__main__':
     lcd.message("Adafruit RGB LCD\nPlate w/Keypad!")
     sleep(1)
     while 1:
-	if (not mcp.input(lcd.LEFT)):
+	if (lcd.buttonPressed(lcd.LEFT)):
 		lcd.backlight(lcd.RED)
 
-	if (not mcp.input(lcd.UP)):
+	if (lcd.buttonPressed(lcd.UP)):
 		lcd.backlight(lcd.BLUE)
 
-	if (not mcp.input(lcd.DOWN)):
+	if (lcd.buttonPressed(lcd.DOWN)):
 		lcd.backlight(lcd.GREEN)
 
-	if (not mcp.input(lcd.RIGHT)):
+	if (lcd.buttonPressed(lcd.RIGHT)):
 		lcd.backlight(lcd.VIOLET)
 
-	if (not mcp.input(lcd.SELECT)):
+	if (lcd.buttonPressed(lcd.SELECT)):
 		lcd.backlight(lcd.ON)
 
 
