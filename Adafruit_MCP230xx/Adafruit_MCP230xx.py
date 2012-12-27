@@ -40,9 +40,9 @@ class Adafruit_MCP230XX(object):
     OUTPUT = 0
     INPUT = 1
     
-    def __init__(self, address, num_gpios, busnum = 0):
+    def __init__(self, address, num_gpios):
         assert num_gpios >= 0 and num_gpios <= 16, "Number of GPIOs must be between 0 and 16"
-        self.i2c = Adafruit_I2C(address=address,  bus=smbus.SMBus(busnum))
+        self.i2c = Adafruit_I2C(address=address)
         self.address = address
         self.num_gpios = num_gpios
 
