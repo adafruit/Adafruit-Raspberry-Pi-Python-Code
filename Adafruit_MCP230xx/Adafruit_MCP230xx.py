@@ -39,10 +39,10 @@ MCP23008_OLATA  = 0x0A
 class Adafruit_MCP230XX(object):
     OUTPUT = 0
     INPUT = 1
-    
-    def __init__(self, address, num_gpios):
-        assert num_gpios >= 0 and num_gpios <= 16, "Number of GPIOs must be between 0 and 16"
-        self.i2c = Adafruit_I2C(address=address)
+
+     def __init__(self, address, num_gpios, busnum = 0):
+         assert num_gpios >= 0 and num_gpios <= 16, "Number of GPIOs must be between 0 and 16"
+         self.i2c = Adafruit_I2C(address=address, bus=smbus.SMBus(busnum))     
         self.address = address
         self.num_gpios = num_gpios
 
@@ -182,6 +182,8 @@ if __name__ == '__main__':
 
     # ***************************************************
 	# Set num_gpios to 8 for MCP23008 or 16 for MCP23017!
+	# If you have a new Pi you may also need to add:
+	# busnum = 1
 	# ***************************************************
 	
 	# Set pins 0, 1 and 2 to output (you can set pins 0..15 this way)
