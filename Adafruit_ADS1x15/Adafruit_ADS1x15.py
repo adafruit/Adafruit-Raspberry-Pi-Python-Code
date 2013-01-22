@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
 import time
+import smbus
 from Adafruit_I2C import Adafruit_I2C
 
 # ===========================================================================
@@ -58,6 +59,15 @@ class ADS1x15:
   __ADS1015_REG_CONFIG_DR_2400SPS   = 0x00A0  # 2400 samples per second
   __ADS1015_REG_CONFIG_DR_3300SPS   = 0x00C0  # 3300 samples per second
 
+  __ADS1115_REG_CONFIG_DR_8SPS      = 0x0000  # 8 samples per second
+  __ADS1115_REG_CONFIG_DR_16SPS     = 0x0020  # 16 samples per second
+  __ADS1115_REG_CONFIG_DR_32SPS     = 0x0040  # 32 samples per second
+  __ADS1115_REG_CONFIG_DR_64SPS     = 0x0060  # 64 samples per second
+  __ADS1115_REG_CONFIG_DR_128SPS    = 0x0080  # 128 samples per second
+  __ADS1115_REG_CONFIG_DR_250SPS    = 0x00A0  # 250 samples per second (default)
+  __ADS1115_REG_CONFIG_DR_475SPS    = 0x00C0  # 475 samples per second
+  __ADS1115_REG_CONFIG_DR_860SPS    = 0x00E0  # 860 samples per second
+
   __ADS1015_REG_CONFIG_CMODE_MASK   = 0x0010
   __ADS1015_REG_CONFIG_CMODE_TRAD   = 0x0000  # Traditional comparator with hysteresis (default)
   __ADS1015_REG_CONFIG_CMODE_WINDOW = 0x0010  # Window comparator
@@ -78,6 +88,11 @@ class ADS1x15:
 
   # Constructor
   def __init__(self, address=0x48, ic=__IC_ADS1015, debug=False):
+  	# Depending on if you have an old or a new Raspberry Pi, you
+  	# may need to change the I2C bus.  Older Pis use SMBus 0,
+  	# whereas new Pis use SMBus 1.  If you see an error like:
+  	# 'Error accessing 0x48: Check your I2C address '
+  	# change the SMBus number in the initializer below!
     self.i2c = Adafruit_I2C(address)
     self.address = address
     self.debug = debug
@@ -98,16 +113,24 @@ class ADS1x15:
         print "ADS1x15: Invalid channel specified: %d" % channel
       return -1
 
-    # Start with default values
-    config = self.__ADS1015_REG_CONFIG_CQUE_NONE    | \
-             self.__ADS1015_REG_CONFIG_CLAT_NONLAT  | \
-             self.__ADS1015_REG_CONFIG_CPOL_ACTVLOW | \
-             self.__ADS1015_REG_CONFIG_CMODE_TRAD   | \
-             self.__ADS1015_REG_CONFIG_DR_1600SPS   | \
-             self.__ADS1015_REG_CONFIG_MODE_SINGLE
+    # Set default values
+    if (self.ic == self.__IC_ADS1015):
+	    config = self.__ADS1015_REG_CONFIG_CQUE_NONE    | \
+	             self.__ADS1015_REG_CONFIG_CLAT_NONLAT  | \
+	             self.__ADS1015_REG_CONFIG_CPOL_ACTVLOW | \
+	             self.__ADS1015_REG_CONFIG_CMODE_TRAD   | \
+	             self.__ADS1015_REG_CONFIG_DR_1600SPS   | \
+	             self.__ADS1015_REG_CONFIG_MODE_SINGLE
+    else:
+	    config = self.__ADS1015_REG_CONFIG_CQUE_NONE    | \
+	             self.__ADS1015_REG_CONFIG_CLAT_NONLAT  | \
+	             self.__ADS1015_REG_CONFIG_CPOL_ACTVLOW | \
+	             self.__ADS1015_REG_CONFIG_CMODE_TRAD   | \
+	             self.__ADS1115_REG_CONFIG_DR_250SPS    | \
+	             self.__ADS1015_REG_CONFIG_MODE_SINGLE
 
-    # Set PGA/voltage range (1 bit = 3mV using the default range)
-    config |= self.__ADS1015_REG_CONFIG_PGA_6_144V    # +/- 6.144V range
+    # Set PGA/voltage range to max value (+/- 6.144V)
+    config |= self.__ADS1015_REG_CONFIG_PGA_6_144V
 
     if channel == 3:
       config |= self.__ADS1015_REG_CONFIG_MUX_SINGLE_3
@@ -126,17 +149,25 @@ class ADS1x15:
     self.i2c.writeList(self.__ADS1015_REG_POINTER_CONFIG, bytes)
 
     # Wait for the ADC conversion to complete
-    time.sleep(0.001)
+    if (self.ic == self.__IC_ADS1015):
+    	time.sleep(0.001)
+    else:
+		time.sleep(0.008)
 
     # Read the conversion results
     result = self.i2c.readList(self.__ADS1015_REG_POINTER_CONVERT, 2)
     if (self.ic == self.__IC_ADS1015):
-      # Shift right 4 bits for the 12-bit ADS1015
-       return ( ((result[0] << 8) | (result[1] & 0xFF)) >> 4 )
+    	# Shift right 4 bits for the 12-bit ADS1015
+    	return ( ((result[0] << 8) | (result[1] & 0xFF)) >> 4 )
     else:
-      # Return 16-bit value for the ADS1115
-      return ( (result[0] << 8) | (result[1] & 0xFF) )
-
+		# Return 16-bit value for the ADS1115
+		# (Take signed values into account as well)
+		val = (result[0] << 8) | (result[1])
+		if val > 0x7FFF:
+			return val - 0xFFFF
+		else:
+			return (result[0] << 8) | (result[1])
+      
   def readADCDifferential01(self):
     "Gets a differential ADC reading from channels 0 and 1"
 
@@ -148,4 +179,3 @@ class ADS1x15:
 
   def getLastConversionResults(self):
     "Returns the last ADC conversion result"
-
