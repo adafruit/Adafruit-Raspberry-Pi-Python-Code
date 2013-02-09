@@ -109,9 +109,6 @@ class Adafruit_MCP230XX(object):
 
         return self.outputvalue
 
-
-        self.outputvalue = self._readandchangepin(MCP23017_IODIRA, pin, value, self.outputvalue)
-        return self.outputvalue
         
     def input(self, pin):
         assert pin >= 0 and pin < self.num_gpios, "Pin number %s is invalid, only 0-%s are valid" % (pin, self.num_gpios)
