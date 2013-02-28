@@ -211,6 +211,12 @@ class Adafruit_CharLCDPlate:
         self.displaymode &= ~self.LCD_ENTRYSHIFTINCREMENT
         self.write4bits(self.LCD_ENTRYMODESET | self.displaymode)
 
+    def createChar(self, location, bitmap):
+        self.write4bits(self.LCD_SETCGRAMADDR | ((location & 7) << 3))
+        for i in range(8):
+            self.write4bits(bitmap[i], True)
+        self.write4bits(self.LCD_SETDDRAMADDR)
+
     def write4bits(self, bits, char_mode=False):
         """ Send command to LCD """
         #self.delayMicroseconds(1000) # 1000 microsecond sleep
