@@ -58,6 +58,7 @@ class Adafruit_MCP230XX(object):
             self.direction |= self.i2c.readU8(MCP23017_IODIRB) << 8
             self.i2c.write8(MCP23017_GPPUA, 0x00)
             self.i2c.write8(MCP23017_GPPUB, 0x00)
+
     
     def _changebit(self, bitmap, bit, value):
         assert value == 1 or value == 0, "Value is %s must be 1 or 0" % value
@@ -70,7 +71,7 @@ class Adafruit_MCP230XX(object):
         assert pin >= 0 and pin < self.num_gpios, "Pin number %s is invalid, only 0-%s are valid" % (pin, self.num_gpios)
         #assert self.direction & (1 << pin) == 0, "Pin %s not set to output" % pin
         if not currvalue:
-             currvalue = self.i2c.readU8(port)
+            currvalue = self.i2c.readU8(port)
         newvalue = self._changebit(currvalue, pin, value)
         self.i2c.write8(port, newvalue)
         return newvalue
@@ -91,10 +92,12 @@ class Adafruit_MCP230XX(object):
             self.direction = self._readandchangepin(MCP23017_IODIRA, pin, mode)
         if self.num_gpios <= 16:
             if (pin < 8):
-                self.direction = self._readandchangepin(MCP23017_IODIRA, pin, mode)
+                # replace low bits
+                self.direction = (self.direction & 0xff00) |  self._readandchangepin(MCP23017_IODIRA, pin, mode)
             else:
-                self.direction = self._readandchangepin(MCP23017_IODIRB, pin-8, mode)
-
+                # replace hi bits
+                self.direction = (self.direction & 0xff) | self._readandchangepin(MCP23017_IODIRB, pin-8, mode) << 8
+        #print "config ", pin, mode, self.direction, bin(self.direction)[2:].zfill(16)
         return self.direction
 
     def output(self, pin, value):
@@ -106,13 +109,14 @@ class Adafruit_MCP230XX(object):
                 self.outputvalue = self._readandchangepin(MCP23017_GPIOA, pin, value, self.i2c.readU8(MCP23017_OLATA))
             else:
                 self.outputvalue = self._readandchangepin(MCP23017_GPIOB, pin-8, value, self.i2c.readU8(MCP23017_OLATB))
-
         return self.outputvalue
 
+# inaccessible code removed from here
         
-    def input(self, pin):
+    def input(self, pin, check=True):
         assert pin >= 0 and pin < self.num_gpios, "Pin number %s is invalid, only 0-%s are valid" % (pin, self.num_gpios)
-        assert self.direction & (1 << pin) != 0, "Pin %s not set to input" % pin
+        if check:
+            assert self.direction & (1 << pin) != 0, "Pin %s not set to input" % pin
         if self.num_gpios <= 8:
             value = self.i2c.readU8(MCP23008_GPIOA)
         elif self.num_gpios > 8 and self.num_gpios <= 16:
@@ -120,37 +124,38 @@ class Adafruit_MCP230XX(object):
             temp = value >> 8
             value <<= 8
             value |= temp
-        return value & (1 << pin)
+        return (value & (1 << pin))>>pin # to make 0 or 1
+    
 
-	def readU8(self):
-		result = self.i2c.readU8(MCP23008_OLATA)
-		return(result)
+ 
+# these were indented so  within scope of input but have now made them all part of the class
+# have modified so can read any address but default to those given in original code
+# also use available routines in imported Adafruit_I2C class
+    def readU8(self, add=MCP23008_OLATA):
+        result = self.i2c.readU8(add)
+        return(result)
 
-	def readS8(self):
-		result = self.i2c.readU8(MCP23008_OLATA)
-		if (result > 127): result -= 256
-		return result
+    def readS8(self, add=MCP23008_OLATA):
+        result = self.i2c.readS8(add)
+        return result
 
-	def readU16(self):
-		assert self.num_gpios >= 16, "16bits required"
-		lo = self.i2c.readU8(MCP23017_OLATA)
-		hi = self.i2c.readU8(MCP23017_OLATB)
-		return((hi << 8) | lo)
+    def readU16(self, add=MCP23017_OLATA):
+        assert self.num_gpios >= 16, "16bits required"
+        result = self.i2c.readU16(add)
+        return result
 
-	def readS16(self):
-		assert self.num_gpios >= 16, "16bits required"
-		lo = self.i2c.readU8(MCP23017_OLATA)
-		hi = self.i2c.readU8(MCP23017_OLATB)
-		if (hi > 127): hi -= 256
-		return((hi << 8) | lo)
+    def readS16(self, add=MCP23017_OLATA):
+        assert self.num_gpios >= 16, "16bits required"
+        result = self.i2c.readS16(add)
+        return result
 
-	def write8(self, value):
-		self.i2c.write8(MCP23008_OLATA, value)
+    def write8(self, value, add=MCP23008_OLATA):
+        self.i2c.write8(add, value)
 
-	def write16(self, value):
-		assert self.num_gpios >= 16, "16bits required"
-		self.i2c.write8(MCP23017_OLATA, value & 0xFF)
-		self.i2c.write8(MCP23017_OLATB, (value >> 8) & 0xFF)        
+    def write16(self, value, add=MCP23017_OLATA):
+        assert self.num_gpios >= 16, "16bits required"
+        self.i2c.write16(add, value)
+      
 
 # RPi.GPIO compatible interface for MCP23017 and MCP23008
 
@@ -178,21 +183,21 @@ if __name__ == '__main__':
     mcp = Adafruit_MCP230XX(address = 0x20, num_gpios = 8)
 
     # ***************************************************
-	# Set num_gpios to 8 for MCP23008 or 16 for MCP23017!
-	# If you have a new Pi you may also need to add:
-	# busnum = 1
-	# ***************************************************
-	
-	# Set pins 0, 1 and 2 to output (you can set pins 0..15 this way)
+    # Set num_gpios to 8 for MCP23008 or 16 for MCP23017!
+    # If you have a new Pi you may also need to add:
+    # busnum = 1
+    # ***************************************************
+    
+    # Set pins 0, 1 and 2 to output (you can set pins 0..15 this way)
     mcp.config(0, mcp.OUTPUT)
     mcp.config(1, mcp.OUTPUT)
     mcp.config(2, mcp.OUTPUT)
-	
-	# Set pin 3 to input with the pullup resistor enabled
+    
+    # Set pin 3 to input with the pullup resistor enabled
     mcp.pullup(3, 1)
     # Read pin 3 and display the results
     print "%d: %x" % (3, mcp.input(3) >> 3)
-	
+    
     # Python speed test on output 0 toggling at max speed
     while (True):
       mcp.output(0, 1)  # Pin 0 High
