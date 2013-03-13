@@ -85,7 +85,9 @@ class Adafruit_CharLCDPlate(Adafruit_MCP230XX):
         self.displayshift    = (self.LCD_CURSORMOVE |
                                 self.LCD_MOVERIGHT)
 
-        self.write4(0x20) # Select 4-bit interface
+#        self.write4(0x20) # Select 4-bit interface
+        self.write4(0x33) # Init
+        self.write4(0x32) # Init
         self.write4(0x28) # 2 line 5x8 matrix
         self.write4(self.LCD_CLEARDISPLAY)
         self.write4(self.LCD_CURSORSHIFT    | self.displayshift)
@@ -102,6 +104,28 @@ class Adafruit_CharLCDPlate(Adafruit_MCP230XX):
              0b00000100, 0b00010100, 0b00001100, 0b00011100,
              0b00000010, 0b00010010, 0b00001010, 0b00011010,
              0b00000110, 0b00010110, 0b00001110, 0b00011110 )
+
+    # Low-level 4 bit output interface
+    def out4(self, bitmask, value):
+        b = bitmask | self.flip[value >> 4] # Insert high 4 bits of data
+        # Write initial !E state, data is sampled on rising strobe edge
+        self.mcp.i2c.bus.write_byte_data(
+          self.mcp.i2c.address, self.mcp.MCP23017_OLATB, b)
+        # Strobe high
+        self.mcp.i2c.bus.write_byte_data(
+          self.mcp.i2c.address, self.mcp.MCP23017_OLATB, b | 0b00100000)
+        # Strobe low
+        self.mcp.i2c.bus.write_byte_data(
+          self.mcp.i2c.address, self.mcp.MCP23017_OLATB, b)
+        b = bitmask | self.flip[value & 0x0F] # Insert low 4 bits
+        self.mcp.i2c.bus.write_byte_data(
+          self.mcp.i2c.address, self.mcp.MCP23017_OLATB, b)
+        self.mcp.i2c.bus.write_byte_data(
+          self.mcp.i2c.address, self.mcp.MCP23017_OLATB, b | 0b00100000)
+        self.mcp.i2c.bus.write_byte_data(
+          self.mcp.i2c.address, self.mcp.MCP23017_OLATB, b)
+        return b
+
 
     # Write 8-bit value to LCD over 4-bit interface
     def write4(self, value, char_mode=False):
@@ -158,23 +182,13 @@ class Adafruit_CharLCDPlate(Adafruit_MCP230XX):
         a &= 0b00000001 # Mask out data bits & RW from current OLATB value
         if char_mode: a |= 0b10000000 # RS = Command/data
 
-        b = a | self.flip[value >> 4] # Insert high 4 bits of data
-        # Write initial !E state, data is sampled on rising strobe edge
-        self.mcp.i2c.bus.write_byte_data(
-          self.mcp.i2c.address, self.mcp.MCP23017_OLATB, b)
-        # Strobe high
-        self.mcp.i2c.bus.write_byte_data(
-          self.mcp.i2c.address, self.mcp.MCP23017_OLATB, b | 0b00100000)
-        # Strobe low
-        self.mcp.i2c.bus.write_byte_data(
-          self.mcp.i2c.address, self.mcp.MCP23017_OLATB, b)
-        b = a | self.flip[value & 0x0F] # Insert low 4 bits
-        self.mcp.i2c.bus.write_byte_data(
-          self.mcp.i2c.address, self.mcp.MCP23017_OLATB, b)
-        self.mcp.i2c.bus.write_byte_data(
-          self.mcp.i2c.address, self.mcp.MCP23017_OLATB, b | 0b00100000)
-        self.mcp.i2c.bus.write_byte_data(
-          self.mcp.i2c.address, self.mcp.MCP23017_OLATB, b)
+        # If string or list, iterate through a write iteration
+        if isinstance(value, str):
+            for v in value: b = self.out4(a, ord(v))
+        elif isinstance(value, list):
+            for v in value: b = self.out4(a, v)
+        else:
+            b = self.out4(a, value)
 
         # Change data pins back to inputs
         self.mcp.i2c.bus.write_byte_data(
@@ -290,18 +304,17 @@ class Adafruit_CharLCDPlate(Adafruit_MCP230XX):
 
     def createChar(self, location, bitmap):
         self.write4(self.LCD_SETCGRAMADDR | ((location & 7) << 3))
-        for i in range(8):
-            self.write4(bitmap[i], True)
+        self.write4(bitmap, True)
         self.write4(self.LCD_SETDDRAMADDR)
 
 
     def message(self, text):
         """ Send string to LCD. Newline wraps to second line"""
-        for char in text:
-            if char == '\n':
-                self.write4(0xC0) # set DDRAM address to second line
-            else:
-                self.write4(ord(char), True)
+        lines = text.split('\n')    # Split at newline(s)
+        for line in lines:          # Render each substring...
+            self.write4(line, True)
+            if len(lines) > 1:      # If newline(s),
+                self.write4(0xC0)   # set DDRAM address to second line
 
 
     def backlight(self, color):
