@@ -8,6 +8,9 @@ from Adafruit_MCP230xx import Adafruit_MCP230XX
 
 class Adafruit_CharLCDPlate(Adafruit_MCP230XX):
 
+    # ----------------------------------------------------------------------
+    # Constants
+
     # Port expander input pin definitions
     SELECT                  = 0
     RIGHT                   = 1
@@ -57,6 +60,9 @@ class Adafruit_CharLCDPlate(Adafruit_MCP230XX):
     LCD_MOVELEFT    = 0x00
 
 
+    # ----------------------------------------------------------------------
+    # Constructor
+
     def __init__(self, busnum=-1, addr=0x20, debug=False):
 
         self.mcp = Adafruit_MCP230XX(addr, 16, busnum, debug)
@@ -77,24 +83,25 @@ class Adafruit_CharLCDPlate(Adafruit_MCP230XX):
         # Init control lines, backlight on (white)
         self.mcp.outputAll(0)
 
-        self.displaycontrol  = (self.LCD_DISPLAYON |
-                                self.LCD_CURSOROFF |
-                                self.LCD_BLINKOFF)
-        self.displaymode     = (self.LCD_ENTRYLEFT |
-                                self.LCD_ENTRYSHIFTDECREMENT)
-        self.displayshift    = (self.LCD_CURSORMOVE |
-                                self.LCD_MOVERIGHT)
+        self.displayshift   = (self.LCD_CURSORMOVE |
+                               self.LCD_MOVERIGHT)
+        self.displaymode    = (self.LCD_ENTRYLEFT |
+                               self.LCD_ENTRYSHIFTDECREMENT)
+        self.displaycontrol = (self.LCD_DISPLAYON |
+                               self.LCD_CURSOROFF |
+                               self.LCD_BLINKOFF)
+        self.write(0x33) # Init
+        self.write(0x32) # Init
+        self.write(0x28) # 2 line 5x8 matrix
+        self.write(self.LCD_CLEARDISPLAY)
+        self.write(self.LCD_CURSORSHIFT    | self.displayshift)
+        self.write(self.LCD_ENTRYMODESET   | self.displaymode)
+        self.write(self.LCD_DISPLAYCONTROL | self.displaycontrol)
+        self.write(self.LCD_RETURNHOME)
 
-#        self.write4(0x20) # Select 4-bit interface
-        self.write4(0x33) # Init
-        self.write4(0x32) # Init
-        self.write4(0x28) # 2 line 5x8 matrix
-        self.write4(self.LCD_CLEARDISPLAY)
-        self.write4(self.LCD_CURSORSHIFT    | self.displayshift)
-        self.write4(self.LCD_ENTRYMODESET   | self.displaymode)
-        self.write4(self.LCD_DISPLAYCONTROL | self.displaycontrol)
-        self.write4(self.LCD_RETURNHOME)
 
+    # ----------------------------------------------------------------------
+    # Write operations
 
     # The LCD data pins (D4-D7) connect to MCP pins 12-9 (PORTB4-1), in
     # that order.  Because this sequence is 'reversed,' a direct shift
@@ -111,10 +118,12 @@ class Adafruit_CharLCDPlate(Adafruit_MCP230XX):
         # Write initial !E state, data is sampled on rising strobe edge
         self.mcp.i2c.bus.write_byte_data(
           self.mcp.i2c.address, self.mcp.MCP23017_OLATB, b)
-        # Strobe high
+        # Strobe high (enable)
         self.mcp.i2c.bus.write_byte_data(
           self.mcp.i2c.address, self.mcp.MCP23017_OLATB, b | 0b00100000)
-        # Strobe low
+        # There's no need for delay calls when strobing, as the limited
+        # I2C throughput already ensures the strobe is held long enough.
+        # Strobe low (!enable)
         self.mcp.i2c.bus.write_byte_data(
           self.mcp.i2c.address, self.mcp.MCP23017_OLATB, b)
         b = bitmask | self.flip[value & 0x0F] # Insert low 4 bits
@@ -124,11 +133,24 @@ class Adafruit_CharLCDPlate(Adafruit_MCP230XX):
           self.mcp.i2c.address, self.mcp.MCP23017_OLATB, b | 0b00100000)
         self.mcp.i2c.bus.write_byte_data(
           self.mcp.i2c.address, self.mcp.MCP23017_OLATB, b)
-        return b
+        return b # Last port state
 
+    # The speed of LCD accesses is inherently limited by I2C through the
+    # port expander.  A 'well behaved program' is expected to poll the
+    # LCD to know that a prior instruction completed.  But the timing of
+    # most instructions is a known uniform 37 mS.  The enable strobe
+    # can't even be twiddled that fast through I2C, so it's a safe bet
+    # with these instructions to not waste time polling (which requires
+    # several I2C transfers for reconfiguring the port direction).
+    # 'pollflag' is set when a potentially time-consuming instruction
+    # has been issued (e.g. screen clear), as well as on startup, and
+    # polling will then occur before more commands or data are issued.
 
-    # Write 8-bit value to LCD over 4-bit interface
-    def write4(self, value, char_mode=False):
+    pollables = ( LCD_CLEARDISPLAY, LCD_RETURNHOME )
+    pollflag  = True
+
+    # Write 8-bit value to LCD
+    def write(self, value, char_mode=False):
         """ Send command/data to LCD """
 
         # The following code does not invoke the base class methods that
@@ -145,44 +167,42 @@ class Adafruit_CharLCDPlate(Adafruit_MCP230XX):
         # LCD pin E   = MCP pin 13 (PORTB5)      Strobe
         # LCD D4...D7 = MCP 12...9 (PORTB4...1)  Data (see notes later)
 
-        # Poll LCD busy state until clear.  Data pins are inputs
-        # by default, so no need to reconfigure I/O direction yet.
-
-        #     Current PORTB pin state      RS=0          RW=1
-        a = ((self.mcp.outputvalue >> 8) & 0b00000001) | 0b01000000
-        b = a | 0b00100000 # E=1
-        # Configure MCP lines for polling.  Will restore later.
-        self.mcp.i2c.bus.write_byte_data(
-          self.mcp.i2c.address, self.mcp.MCP23017_OLATB, a)
-        while True:
-            # Strobe high (enable)
-            self.mcp.i2c.bus.write_byte_data(
-              self.mcp.i2c.address, self.mcp.MCP23017_OLATB, b)
-            # There's no need for delay calls when strobing, as the
-            # limited I2C throughput already ensures the strobe is
-            # held long enough.
-            # First nybble contains busy state
-            bits = self.mcp.i2c.bus.read_byte_data(
-              self.mcp.i2c.address, self.mcp.MCP23017_GPIOB)
-            # Strobe low (!enable)
+        # If pollflag is set, poll LCD busy state until clear.  Data
+        # pins were previously set as inputs, no need to reconfigure
+        # I/O yet.
+        if self.pollflag:
+            #     Current PORTB pin state      RS=0          RW=1
+            a = ((self.mcp.outputvalue >> 8) & 0b00000001) | 0b01000000
+            b = a | 0b00100000 # E=1
             self.mcp.i2c.bus.write_byte_data(
               self.mcp.i2c.address, self.mcp.MCP23017_OLATB, a)
-            if (bits & 0b00000010) == 0: break # D7=0, not busy
-            # Ignore second nybble
-            self.mcp.i2c.bus.write_byte_data(
-              self.mcp.i2c.address, self.mcp.MCP23017_OLATB, b)
-            self.mcp.i2c.bus.write_byte_data(
-              self.mcp.i2c.address, self.mcp.MCP23017_OLATB, a)
+            while True:
+                # Strobe high (enable)
+                self.mcp.i2c.bus.write_byte_data(
+                  self.mcp.i2c.address, self.mcp.MCP23017_OLATB, b)
+                # First nybble contains busy state
+                bits = self.mcp.i2c.bus.read_byte_data(
+                  self.mcp.i2c.address, self.mcp.MCP23017_GPIOB)
+                # Strobe low (!enable)
+                self.mcp.i2c.bus.write_byte_data(
+                  self.mcp.i2c.address, self.mcp.MCP23017_OLATB, a)
+                if (bits & 0b00000010) == 0: break # D7=0, not busy
+                # Ignore second nybble
+                self.mcp.i2c.bus.write_byte_data(
+                  self.mcp.i2c.address, self.mcp.MCP23017_OLATB, b)
+                self.mcp.i2c.bus.write_byte_data(
+                  self.mcp.i2c.address, self.mcp.MCP23017_OLATB, a)
 
-        # Change data pins to outputs temporarily
-        save = self.mcp.direction >> 8 # PORTB
-        self.mcp.i2c.bus.write_byte_data(
-          self.mcp.i2c.address, self.mcp.MCP23017_IODIRB, save & 0b11100001)
+            # Polling complete, change data pins to outputs
+            save = self.mcp.direction >> 8 # PORTB
+            self.mcp.i2c.bus.write_byte_data(
+              self.mcp.i2c.address, self.mcp.MCP23017_IODIRB, save&0b11100001)
 
-        a &= 0b00000001 # Mask out data bits & RW from current OLATB value
+        # Mask out data bits & RW from current OLATB value
+        a = ((self.mcp.outputvalue >> 8) & 0b00000001)
         if char_mode: a |= 0b10000000 # RS = Command/data
 
-        # If string or list, iterate through a write iteration
+        # If string or list, iterate through multiple write ops
         if isinstance(value, str):
             for v in value: b = self.out4(a, ord(v))
         elif isinstance(value, list):
@@ -190,12 +210,18 @@ class Adafruit_CharLCDPlate(Adafruit_MCP230XX):
         else:
             b = self.out4(a, value)
 
-        # Change data pins back to inputs
-        self.mcp.i2c.bus.write_byte_data(
-          self.mcp.i2c.address, self.mcp.MCP23017_IODIRB, save)
-        # And update mcp outputvalue state to reflect changes here
-        self.mcp.outputvalue = (self.mcp.outputvalue & 0x00FF) | (b << 8)
+        # If a poll-worthy instruction was issued, reconfigure
+        # data pins as inputs and set flag to poll on next call.
+        if (not char_mode) and (value in self.pollables):
+            self.mcp.i2c.bus.write_byte_data(
+              self.mcp.i2c.address, self.mcp.MCP23017_IODIRB, save)
+            # Update mcp outputvalue state to reflect changes here
+            self.mcp.outputvalue = (self.mcp.outputvalue & 0x00FF) | (b << 8)
+            self.pollflag = True
 
+
+    # ----------------------------------------------------------------------
+    # Utility methods
 
     def begin(self, cols, lines):
         self.currline = 0
@@ -204,117 +230,117 @@ class Adafruit_CharLCDPlate(Adafruit_MCP230XX):
 
 
     def clear(self):
-        self.write4(self.LCD_CLEARDISPLAY)
+        self.write(self.LCD_CLEARDISPLAY)
 
 
     def home(self):
-        self.write4(self.LCD_RETURNHOME)
+        self.write(self.LCD_RETURNHOME)
 
 
     row_offsets = ( 0x00, 0x40, 0x14, 0x54 )
     def setCursor(self, col, row):
         if row > self.numlines: row = self.numlines - 1
         elif row < 0:           row = 0
-        self.write4(self.LCD_SETDDRAMADDR | (col + self.row_offsets[row]))
+        self.write(self.LCD_SETDDRAMADDR | (col + self.row_offsets[row]))
 
 
     def display(self):
         """ Turn the display on (quickly) """
         self.displaycontrol |= self.LCD_DISPLAYON
-        self.write4(self.LCD_DISPLAYCONTROL | self.displaycontrol)
+        self.write(self.LCD_DISPLAYCONTROL | self.displaycontrol)
 
 
     def noDisplay(self):
         """ Turn the display off (quickly) """
         self.displaycontrol &= ~self.LCD_DISPLAYON
-        self.write4(self.LCD_DISPLAYCONTROL | self.displaycontrol)
+        self.write(self.LCD_DISPLAYCONTROL | self.displaycontrol)
 
 
     def cursor(self):
         """ Underline cursor on """
         self.displaycontrol |= self.LCD_CURSORON
-        self.write4(self.LCD_DISPLAYCONTROL | self.displaycontrol)
+        self.write(self.LCD_DISPLAYCONTROL | self.displaycontrol)
 
 
     def noCursor(self):
         """ Underline cursor off """
         self.displaycontrol &= ~self.LCD_CURSORON
-        self.write4(self.LCD_DISPLAYCONTROL | self.displaycontrol)
+        self.write(self.LCD_DISPLAYCONTROL | self.displaycontrol)
 
 
     def ToggleCursor(self):
         """ Toggles the underline cursor On/Off """
         self.displaycontrol ^= self.LCD_CURSORON
-        self.write4(self.LCD_DISPLAYCONTROL | self.displaycontrol)
+        self.write(self.LCD_DISPLAYCONTROL | self.displaycontrol)
 
 
     def blink(self):
         """ Turn on the blinking cursor """
         self.displaycontrol |= self.LCD_BLINKON
-        self.write4(self.LCD_DISPLAYCONTROL | self.displaycontrol)
+        self.write(self.LCD_DISPLAYCONTROL | self.displaycontrol)
 
 
     def noBlink(self):
         """ Turn off the blinking cursor """
         self.displaycontrol &= ~self.LCD_BLINKON
-        self.write4(self.LCD_DISPLAYCONTROL | self.displaycontrol)
+        self.write(self.LCD_DISPLAYCONTROL | self.displaycontrol)
 
 
     def ToggleBlink(self):
         """ Toggles the blinking cursor """
         self.displaycontrol ^= self.LCD_BLINKON
-        self.write4(self.LCD_DISPLAYCONTROL | self.displaycontrol)
+        self.write(self.LCD_DISPLAYCONTROL | self.displaycontrol)
 
 
     def DisplayLeft(self):
         """ These commands scroll the display without changing the RAM """
         self.displayshift = self.LCD_DISPLAYMODE | self.LCD_MOVELEFT
-        self.write4(self.LCD_CURSORSHIFT | self.displayshift)
+        self.write(self.LCD_CURSORSHIFT | self.displayshift)
 
 
     def scrollDisplayRight(self):
         """ These commands scroll the display without changing the RAM """
         self.displayshift = self.LCD_DISPLAYMOVE | self.LCD_MOVERIGHT
-        self.write4(self.LCD_CURSORSHIFT | self.displayshift)
+        self.write(self.LCD_CURSORSHIFT | self.displayshift)
 
 
     def leftToRight(self):
         """ This is for text that flows left to right """
         self.displaymode |= self.LCD_ENTRYLEFT
-        self.write4(self.LCD_ENTRYMODESET | self.displaymode)
+        self.write(self.LCD_ENTRYMODESET | self.displaymode)
 
 
     def rightToLeft(self):
         """ This is for text that flows right to left """
         self.displaymode &= ~self.LCD_ENTRYLEFT
-        self.write4(self.LCD_ENTRYMODESET | self.displaymode)
+        self.write(self.LCD_ENTRYMODESET | self.displaymode)
 
 
     def autoscroll(self):
         """ This will 'right justify' text from the cursor """
         self.displaymode |= self.LCD_ENTRYSHIFTINCREMENT
-        self.write4(self.LCD_ENTRYMODESET | self.displaymode)
+        self.write(self.LCD_ENTRYMODESET | self.displaymode)
 
 
     def noAutoscroll(self):
         """ This will 'left justify' text from the cursor """
         self.displaymode &= ~self.LCD_ENTRYSHIFTINCREMENT
-        self.write4(self.LCD_ENTRYMODESET | self.displaymode)
+        self.write(self.LCD_ENTRYMODESET | self.displaymode)
 
 
     def createChar(self, location, bitmap):
-        self.write4(self.LCD_SETCGRAMADDR | ((location & 7) << 3))
-        self.write4(bitmap, True)
-        self.write4(self.LCD_SETDDRAMADDR)
+        self.write(self.LCD_SETCGRAMADDR | ((location & 7) << 3))
+        self.write(bitmap, True)
+        self.write(self.LCD_SETDDRAMADDR)
 
 
     def message(self, text):
         """ Send string to LCD. Newline wraps to second line"""
-        lines = text.split('\n')    # Split at newline(s)
-        for line in lines:          # Render each substring...
-            self.write4(line, True)
-            if len(lines) > 1:      # If newline(s),
-                self.write4(0xC0)   # set DDRAM address to second line
+        lines = text.split('\n')   # Split at newline(s)
+        for line in lines:         # Render each substring...
+            self.write(line, True)
+            if len(lines) > 1:     # If newline(s),
+                self.write(0xC0)   # set DDRAM address to second line
 
 
     def backlight(self, color):
@@ -329,6 +355,9 @@ class Adafruit_CharLCDPlate(Adafruit_MCP230XX):
     def buttonPressed(self, b):
         return not self.mcp.input(b) if 0 <= b <= self.LEFT else False
 
+
+    # ----------------------------------------------------------------------
+    # Test code
 
 if __name__ == '__main__':
 
