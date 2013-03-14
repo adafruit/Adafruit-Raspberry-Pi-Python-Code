@@ -123,10 +123,8 @@ class Adafruit_CharLCDPlate(Adafruit_MCP230XX):
           self.mcp.i2c.address, self.mcp.MCP23017_OLATB, b | 0b00100000)
         # There's no need for delay calls when strobing, as the limited
         # I2C throughput already ensures the strobe is held long enough.
-        # Strobe low (!enable)
-        self.mcp.i2c.bus.write_byte_data(
-          self.mcp.i2c.address, self.mcp.MCP23017_OLATB, b)
         b = bitmask | self.flip[value & 0x0F] # Insert low 4 bits
+        # This also does strobe low (!enable) for prior nybble
         self.mcp.i2c.bus.write_byte_data(
           self.mcp.i2c.address, self.mcp.MCP23017_OLATB, b)
         self.mcp.i2c.bus.write_byte_data(
@@ -142,12 +140,12 @@ class Adafruit_CharLCDPlate(Adafruit_MCP230XX):
     # can't even be twiddled that fast through I2C, so it's a safe bet
     # with these instructions to not waste time polling (which requires
     # several I2C transfers for reconfiguring the port direction).
-    # 'pollflag' is set when a potentially time-consuming instruction
-    # has been issued (e.g. screen clear), as well as on startup, and
-    # polling will then occur before more commands or data are issued.
+    # I/O pins are set as inputs when a potentially time-consuming
+    # instruction has been issued (e.g. screen clear), as well as on
+    # startup, and polling will then occur before more commands or data
+    # are issued.
 
     pollables = ( LCD_CLEARDISPLAY, LCD_RETURNHOME )
-    pollflag  = True
 
     # Write 8-bit value to LCD
     def write(self, value, char_mode=False):
@@ -167,10 +165,8 @@ class Adafruit_CharLCDPlate(Adafruit_MCP230XX):
         # LCD pin E   = MCP pin 13 (PORTB5)      Strobe
         # LCD D4...D7 = MCP 12...9 (PORTB4...1)  Data (see notes later)
 
-        # If pollflag is set, poll LCD busy state until clear.  Data
-        # pins were previously set as inputs, no need to reconfigure
-        # I/O yet.
-        if self.pollflag:
+        # If I/O pins are in input state, poll LCD busy flag until clear.
+        if self.mcp.direction & 0b0001111000000000 > 0:
             #     Current PORTB pin state      RS=0          RW=1
             a = ((self.mcp.outputvalue >> 8) & 0b00000001) | 0b01000000
             b = a | 0b00100000 # E=1
@@ -194,9 +190,9 @@ class Adafruit_CharLCDPlate(Adafruit_MCP230XX):
                   self.mcp.i2c.address, self.mcp.MCP23017_OLATB, a)
 
             # Polling complete, change data pins to outputs
-            save = self.mcp.direction >> 8 # PORTB
-            self.mcp.i2c.bus.write_byte_data(
-              self.mcp.i2c.address, self.mcp.MCP23017_IODIRB, save&0b11100001)
+            self.mcp.direction &= 0b1110000111111111
+            self.mcp.i2c.bus.write_byte_data(self.mcp.i2c.address,
+              self.mcp.MCP23017_IODIRB, self.mcp.direction >> 8)
 
         # Mask out data bits & RW from current OLATB value
         a = ((self.mcp.outputvalue >> 8) & 0b00000001)
@@ -210,14 +206,15 @@ class Adafruit_CharLCDPlate(Adafruit_MCP230XX):
         else:
             b = self.out4(a, value)
 
+        # Update mcp outputvalue state to reflect changes here
+        self.mcp.outputvalue = (self.mcp.outputvalue & 0x00FF) | (b << 8)
+
         # If a poll-worthy instruction was issued, reconfigure
-        # data pins as inputs and set flag to poll on next call.
+        # data pins as inputs to indicate need for poll on next call.
         if (not char_mode) and (value in self.pollables):
-            self.mcp.i2c.bus.write_byte_data(
-              self.mcp.i2c.address, self.mcp.MCP23017_IODIRB, save)
-            # Update mcp outputvalue state to reflect changes here
-            self.mcp.outputvalue = (self.mcp.outputvalue & 0x00FF) | (b << 8)
-            self.pollflag = True
+            self.mcp.direction |= 0b0001111000000000
+            self.mcp.i2c.bus.write_byte_data(self.mcp.i2c.address,
+              self.mcp.MCP23017_IODIRB, self.mcp.direction >> 8)
 
 
     # ----------------------------------------------------------------------
