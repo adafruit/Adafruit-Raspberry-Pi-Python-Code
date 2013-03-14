@@ -116,8 +116,9 @@ class Adafruit_CharLCDPlate(Adafruit_MCP230XX):
     def out4(self, bitmask, value):
         b = bitmask | self.flip[value >> 4] # Insert high 4 bits of data
         # Write initial !E state, data is sampled on rising strobe edge
-        self.mcp.i2c.bus.write_byte_data(
-          self.mcp.i2c.address, self.mcp.MCP23017_OLATB, b)
+#       Commented out, seems to be OK setting & strobing at same time
+#       self.mcp.i2c.bus.write_byte_data(
+#         self.mcp.i2c.address, self.mcp.MCP23017_OLATB, b)
         # Strobe high (enable)
         self.mcp.i2c.bus.write_byte_data(
           self.mcp.i2c.address, self.mcp.MCP23017_OLATB, b | 0b00100000)
@@ -197,6 +198,7 @@ class Adafruit_CharLCDPlate(Adafruit_MCP230XX):
         # Mask out data bits & RW from current OLATB value
         a = ((self.mcp.outputvalue >> 8) & 0b00000001)
         if char_mode: a |= 0b10000000 # RS = Command/data
+        b = a
 
         # If string or list, iterate through multiple write ops
         if isinstance(value, str):
