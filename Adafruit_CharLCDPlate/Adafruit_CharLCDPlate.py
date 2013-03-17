@@ -1,15 +1,28 @@
 #!/usr/bin/python
 
-# Based on code from lrvick and LiquidCrystal
+# Python library for Adafruit RGB-backlit LCD plate for Raspberry Pi.
+# Written by Adafruit Industries.  MIT license.
+
+# This is essentially a complete rewrite, but the calling syntax
+# and constants are based on code from lrvick and LiquidCrystal.
 # lrvic - https://github.com/lrvick/raspi-hd44780/blob/master/hd44780.py
 # LiquidCrystal - https://github.com/arduino/Arduino/blob/master/libraries/LiquidCrystal/LiquidCrystal.cpp
 
-from Adafruit_MCP230xx import Adafruit_MCP230XX
+from Adafruit_I2C import Adafruit_I2C
 
-class Adafruit_CharLCDPlate(Adafruit_MCP230XX):
+
+class Adafruit_CharLCDPlate(Adafruit_I2C):
 
     # ----------------------------------------------------------------------
     # Constants
+
+    # Port expander registers
+    MCP23017_IOCON_BANK0    = 0x0A  # IOCON when Bank 0 active
+    MCP23017_IOCON_BANK1    = 0x05  # IOCON when Bank 1 active
+    # These are register addresses when in Bank 1 only:
+    MCP23017_GPIOA          = 0x09
+    MCP23017_IODIRB         = 0x10
+    MCP23017_GPIOB          = 0x19
 
     # Port expander input pin definitions
     SELECT                  = 0
@@ -65,23 +78,55 @@ class Adafruit_CharLCDPlate(Adafruit_MCP230XX):
 
     def __init__(self, busnum=-1, addr=0x20, debug=False):
 
-        self.mcp = Adafruit_MCP230XX(addr, 16, busnum, debug)
+        self.i2c = Adafruit_I2C(addr, busnum, debug)
 
-        for i in range(0,16):
-            if i < 6:
-                # Configure button lines as inputs w/pullups
-                self.mcp.config(i, Adafruit_MCP230XX.INPUT)
-                self.mcp.pullup(i, True)
-            elif 9 <= i <= 12:
-                # Configure LCD data lines as inputs w/o pullups
-                self.mcp.config(i, Adafruit_MCP230XX.INPUT)
-                self.mcp.pullup(i, False)
-            else:
-                # All other lines are outputs
-                self.mcp.config(i, Adafruit_MCP230XX.OUTPUT)
+        # I2C is relatively slow.  MCP output port states are cached
+        # so we don't need to constantly poll-and-change bit states.
+        self.porta, self.portb, self.ddrb = 0, 0, 0b00010000
 
-        # Init control lines, backlight on (white)
-        self.mcp.outputAll(0)
+        # Set MCP23017 IOCON register to Bank 0 with sequential operation.
+        # If chip is already set for Bank 0, this will just write to OLATB,
+        # which won't seriously bother anything on the plate right now
+        # (blue backlight LED will come on, but that's done in the next
+        # step anyway).
+        self.i2c.bus.write_byte_data(
+          self.i2c.address, self.MCP23017_IOCON_BANK1, 0)
+
+        # Brute force reload ALL registers to known state.  This also
+        # sets up all the input pins, pull-ups, etc. for the Pi Plate.
+        self.i2c.bus.write_i2c_block_data(
+          self.i2c.address, 0, 
+          [ 0b00111111,   # IODIRA    R+G LEDs=outputs, buttons=inputs
+            self.ddrb ,   # IODIRB    LCD D7=input, Blue LED=output
+            0b00111111,   # IPOLA     Invert polarity on button inputs
+            0b00000000,   # IPOLB
+            0b00000000,   # GPINTENA  Disable interrupt-on-change
+            0b00000000,   # GPINTENB
+            0b00000000,   # DEFVALA
+            0b00000000,   # DEFVALB
+            0b00000000,   # INTCONA
+            0b00000000,   # INTCONB
+            0b00000000,   # IOCON
+            0b00000000,   # IOCON
+            0b00111111,   # GPPUA     Enable pull-ups on buttons
+            0b00000000,   # GPPUB
+            0b00000000,   # INTFA
+            0b00000000,   # INTFB
+            0b00000000,   # INTCAPA
+            0b00000000,   # INTCAPB
+            self.porta,   # GPIOA
+            self.portb,   # GPIOB
+            self.porta,   # OLATA     0 on all outputs; side effect of
+            self.portb ]) # OLATB     turning on R+G+B backlight LEDs.
+
+        # Switch to Bank 1 and disable sequential operation.
+        # From this point forward, the register addresses do NOT match
+        # the list immediately above.  Instead, use the constants defined
+        # at the start of the class.  Also, the address register will no
+        # longer increment automatically after this -- multi-byte
+        # operations must be broken down into single-byte calls.
+        self.i2c.bus.write_byte_data(
+          self.i2c.address, self.MCP23017_IOCON_BANK0, 0b10100000)
 
         self.displayshift   = (self.LCD_CURSORMOVE |
                                self.LCD_MOVERIGHT)
@@ -90,6 +135,7 @@ class Adafruit_CharLCDPlate(Adafruit_MCP230XX):
         self.displaycontrol = (self.LCD_DISPLAYON |
                                self.LCD_CURSOROFF |
                                self.LCD_BLINKOFF)
+
         self.write(0x33) # Init
         self.write(0x32) # Init
         self.write(0x28) # 2 line 5x8 matrix
@@ -112,27 +158,15 @@ class Adafruit_CharLCDPlate(Adafruit_MCP230XX):
              0b00000010, 0b00010010, 0b00001010, 0b00011010,
              0b00000110, 0b00010110, 0b00001110, 0b00011110 )
 
-    # Low-level 4 bit output interface
+    # Low-level 4-bit interface for LCD output.  This doesn't actually
+    # write data, just returns a byte array of the PORTB state over time.
+    # Can concatenate the output of multiple calls (up to 8) for more
+    # efficient batch write.
     def out4(self, bitmask, value):
-        b = bitmask | self.flip[value >> 4] # Insert high 4 bits of data
-        # Write initial !E state, data is sampled on rising strobe edge
-#       Commented out, seems to be OK setting & strobing at same time
-#       self.mcp.i2c.bus.write_byte_data(
-#         self.mcp.i2c.address, self.mcp.MCP23017_OLATB, b)
-        # Strobe high (enable)
-        self.mcp.i2c.bus.write_byte_data(
-          self.mcp.i2c.address, self.mcp.MCP23017_OLATB, b | 0b00100000)
-        # There's no need for delay calls when strobing, as the limited
-        # I2C throughput already ensures the strobe is held long enough.
-        b = bitmask | self.flip[value & 0x0F] # Insert low 4 bits
-        # This also does strobe low (!enable) for prior nybble
-        self.mcp.i2c.bus.write_byte_data(
-          self.mcp.i2c.address, self.mcp.MCP23017_OLATB, b)
-        self.mcp.i2c.bus.write_byte_data(
-          self.mcp.i2c.address, self.mcp.MCP23017_OLATB, b | 0b00100000)
-        self.mcp.i2c.bus.write_byte_data(
-          self.mcp.i2c.address, self.mcp.MCP23017_OLATB, b)
-        return b # Last port state
+        hi = bitmask | self.flip[value >> 4]
+        lo = bitmask | self.flip[value & 0x0F]
+        return [hi | 0b00100000, hi, lo | 0b00100000, lo]
+
 
     # The speed of LCD accesses is inherently limited by I2C through the
     # port expander.  A 'well behaved program' is expected to poll the
@@ -141,82 +175,83 @@ class Adafruit_CharLCDPlate(Adafruit_MCP230XX):
     # can't even be twiddled that fast through I2C, so it's a safe bet
     # with these instructions to not waste time polling (which requires
     # several I2C transfers for reconfiguring the port direction).
-    # I/O pins are set as inputs when a potentially time-consuming
+    # The D7 pin is set as input when a potentially time-consuming
     # instruction has been issued (e.g. screen clear), as well as on
     # startup, and polling will then occur before more commands or data
     # are issued.
 
     pollables = ( LCD_CLEARDISPLAY, LCD_RETURNHOME )
 
-    # Write 8-bit value to LCD
+    # Write byte, list or string value to LCD
     def write(self, value, char_mode=False):
         """ Send command/data to LCD """
 
-        # The following code does not invoke the base class methods that
-        # handle I/O exceptions.  Instead, the underlying smbus calls are
-        # invoked directly for expediency, the expectation being that any
-        # I2C access or address type errors have already been identified
-        # during initialization.
-
-        # The LCD control lines are all on MCP PORTB, so I2C byte ops
-        # on that single port (rather than word ops on both PORTA and
-        # PORTB together) are used here to save some bandwidth.
-        # LCD pin RS  = MCP pin 15 (PORTB7)      Command/data
-        # LCD pin RW  = MCP pin 14 (PORTB6)      Read/write
-        # LCD pin E   = MCP pin 13 (PORTB5)      Strobe
-        # LCD D4...D7 = MCP 12...9 (PORTB4...1)  Data (see notes later)
-
-        # If I/O pins are in input state, poll LCD busy flag until clear.
-        if self.mcp.direction & 0b0001111000000000 > 0:
-            #     Current PORTB pin state      RS=0          RW=1
-            a = ((self.mcp.outputvalue >> 8) & 0b00000001) | 0b01000000
-            b = a | 0b00100000 # E=1
-            self.mcp.i2c.bus.write_byte_data(
-              self.mcp.i2c.address, self.mcp.MCP23017_OLATB, a)
+        # If pin D7 is in input state, poll LCD busy flag until clear.
+        if self.ddrb & 0b00010000:
+            lo = (self.portb & 0b00000001) | 0b01000000
+            hi = lo | 0b00100000 # E=1 (strobe)
+            self.i2c.bus.write_byte_data(
+              self.i2c.address, self.MCP23017_GPIOB, lo)
             while True:
                 # Strobe high (enable)
-                self.mcp.i2c.bus.write_byte_data(
-                  self.mcp.i2c.address, self.mcp.MCP23017_OLATB, b)
+                self.i2c.bus.write_byte(self.i2c.address, hi)
                 # First nybble contains busy state
-                bits = self.mcp.i2c.bus.read_byte_data(
-                  self.mcp.i2c.address, self.mcp.MCP23017_GPIOB)
-                # Strobe low (!enable)
-                self.mcp.i2c.bus.write_byte_data(
-                  self.mcp.i2c.address, self.mcp.MCP23017_OLATB, a)
+                bits = self.i2c.bus.read_byte(self.i2c.address)
+                # Strobe low, high, low.  Second nybble (A3) is ignored.
+                self.i2c.bus.write_i2c_block_data(
+                  self.i2c.address, self.MCP23017_GPIOB, [lo, hi, lo])
                 if (bits & 0b00000010) == 0: break # D7=0, not busy
-                # Ignore second nybble
-                self.mcp.i2c.bus.write_byte_data(
-                  self.mcp.i2c.address, self.mcp.MCP23017_OLATB, b)
-                self.mcp.i2c.bus.write_byte_data(
-                  self.mcp.i2c.address, self.mcp.MCP23017_OLATB, a)
+            self.portb = lo
 
-            # Polling complete, change data pins to outputs
-            self.mcp.direction &= 0b1110000111111111
-            self.mcp.i2c.bus.write_byte_data(self.mcp.i2c.address,
-              self.mcp.MCP23017_IODIRB, self.mcp.direction >> 8)
+            # Polling complete, change D7 pin to output
+            self.ddrb &= 0b11101111
+            self.i2c.bus.write_byte_data(self.i2c.address,
+              self.MCP23017_IODIRB, self.ddrb)
 
-        # Mask out data bits & RW from current OLATB value
-        a = ((self.mcp.outputvalue >> 8) & 0b00000001)
-        if char_mode: a |= 0b10000000 # RS = Command/data
-        b = a
+        bitmask = self.portb & 0b00000001   # Mask out PORTB LCD control bits
+        if char_mode: bitmask |= 0b10000000 # Set data bit if not a command
 
         # If string or list, iterate through multiple write ops
         if isinstance(value, str):
-            for v in value: b = self.out4(a, ord(v))
+            last = len(value) - 1 # Last character in string
+            data = []             # Start with blank list
+            for i, v in enumerate(value): # For each character...
+                # Append 4 bytes to list representing PORTB over time.
+                # First the high 4 data bits with strobe (enable) set
+                # and unset, then same with low 4 data bits (strobe 1/0).
+                data.extend(self.out4(bitmask, ord(v)))
+                # I2C block data write is limited to 32 bytes max.
+                # If limit reached, write data so far and clear.
+                # Also do this on last byte if not otherwise handled.
+                if (len(data) >= 32) or (i == last):
+                    self.i2c.bus.write_i2c_block_data(
+                      self.i2c.address, self.MCP23017_GPIOB, data)
+                    self.portb = data[-1] # Save state of last byte out
+                    data       = []       # Clear list for next iteration
         elif isinstance(value, list):
-            for v in value: b = self.out4(a, v)
+            # Same as above, but for list instead of string
+            last = len(value) - 1
+            data = []
+            for i, v in enumerate(value):
+                data.extend(self.out4(bitmask, v))
+                if (len(data) >= 32) or (i == last):
+                    self.i2c.bus.write_i2c_block_data(
+                      self.i2c.address, self.MCP23017_GPIOB, data)
+                    self.portb = data[-1]
+                    data       = []
         else:
-            b = self.out4(a, value)
+            # Single byte
+            data = self.out4(bitmask, value)
+            self.i2c.bus.write_i2c_block_data(
+              self.i2c.address, self.MCP23017_GPIOB, data)
+            self.portb = data[-1]
 
-        # Update mcp outputvalue state to reflect changes here
-        self.mcp.outputvalue = (self.mcp.outputvalue & 0x00FF) | (b << 8)
-
-        # If a poll-worthy instruction was issued, reconfigure
-        # data pins as inputs to indicate need for poll on next call.
+        # If a poll-worthy instruction was issued, reconfigure D7
+        # pin as input to indicate need for polling on next call.
         if (not char_mode) and (value in self.pollables):
-            self.mcp.direction |= 0b0001111000000000
-            self.mcp.i2c.bus.write_byte_data(self.mcp.i2c.address,
-              self.mcp.MCP23017_IODIRB, self.mcp.direction >> 8)
+            self.ddrb |= 0b00010000
+            self.i2c.bus.write_byte_data(self.i2c.address,
+              self.MCP23017_IODIRB, self.ddrb)
 
 
     # ----------------------------------------------------------------------
@@ -343,16 +378,18 @@ class Adafruit_CharLCDPlate(Adafruit_MCP230XX):
 
 
     def backlight(self, color):
-        n = ((self.mcp.outputvalue & 0b1111111000111111) |
-             (((~color) & 0b111) << 6))
-        # Direct smbus call so everything toggles together
-        self.mcp.i2c.bus.write_word_data(
-          self.mcp.i2c.address, self.mcp.MCP23017_OLATA, n)
-        self.mcp.outputvalue = n
+        c          = ~color
+        self.porta = (self.porta & 0b00111111) | ((c & 0b011) << 6)
+        self.portb = (self.portb & 0b11111110) | ((c & 0b100) >> 2)
+        # Has to be done as two writes because sequential operation is off.
+        self.i2c.bus.write_byte_data(
+          self.i2c.address, self.MCP23017_GPIOA, self.porta)
+        self.i2c.bus.write_byte_data(
+          self.i2c.address, self.MCP23017_GPIOB, self.portb)
 
 
     def buttonPressed(self, b):
-        return not self.mcp.input(b) if 0 <= b <= self.LEFT else False
+        return (self.i2c.readU8(self.MCP23017_GPIOA) >> b) & 1
 
 
     # ----------------------------------------------------------------------

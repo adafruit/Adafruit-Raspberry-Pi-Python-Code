@@ -1,64 +1,37 @@
 #!/usr/bin/python
 
 from time import sleep
-from Adafruit_I2C import Adafruit_I2C
-from Adafruit_MCP230xx import Adafruit_MCP230XX
 from Adafruit_CharLCDPlate import Adafruit_CharLCDPlate
 
-import smbus
+# Initialize the LCD plate.  Should auto-detect correct I2C bus.  If not,
+# pass '0' for early 256 MB Model B boards or '1' for all later versions
+lcd = Adafruit_CharLCDPlate()
 
-
-# initialize the LCD plate
-# use busnum = 0 for raspi version 1 (256MB) and busnum = 1 for version 2
-lcd = Adafruit_CharLCDPlate(busnum = 0)
-
-# clear display
+# Clear display and show greeting, pause 1 sec
 lcd.clear()
-# hello!
 lcd.message("Adafruit RGB LCD\nPlate w/Keypad!")
 sleep(1)
 
-# first loop, just changes the color
-lcd.backlight(lcd.RED)
-sleep(.5)
-lcd.backlight(lcd.YELLOW)
-sleep(.5)
-lcd.backlight(lcd.GREEN)
-sleep(.5)
-lcd.backlight(lcd.TEAL)
-sleep(.5)
-lcd.backlight(lcd.BLUE)
-sleep(.5)
-lcd.backlight(lcd.VIOLET)
-sleep(.5)
-lcd.backlight(lcd.ON)
-sleep(.5)
-lcd.backlight(lcd.OFF)
-sleep(.5)
+# Cycle through backlight colors
+col = (lcd.RED , lcd.YELLOW, lcd.GREEN, lcd.TEAL,
+       lcd.BLUE, lcd.VIOLET, lcd.ON   , lcd.OFF)
+for c in col:
+    lcd.backlight(c)
+    sleep(.5)
 
-while 1:
-	if (lcd.buttonPressed(lcd.LEFT)):
-		lcd.clear()
-		lcd.message("Red Red Wine")
-		lcd.backlight(lcd.RED)
-
-	if (lcd.buttonPressed(lcd.UP)):
-		lcd.clear()
-		lcd.message("Sita Sings \nthe blues")
-		lcd.backlight(lcd.BLUE)
-
-	if (lcd.buttonPressed(lcd.DOWN)):
-		lcd.clear()
-		lcd.message("I see fields\nof green");
-		lcd.backlight(lcd.GREEN)
-
-	if (lcd.buttonPressed(lcd.RIGHT)):
-		lcd.clear()
-		lcd.message("Purple mountain\n majesties");
-		lcd.backlight(lcd.VIOLET)
-
-	if (lcd.buttonPressed(lcd.SELECT)):
-		lcd.clear()
-		lcd.backlight(lcd.ON)
-
-
+# Poll buttons, display message & set backlight accordingly
+btn = ((lcd.LEFT  , 'Red Red Wine'              , lcd.RED),
+       (lcd.UP    , 'Sita sings\nthe blues'     , lcd.BLUE),
+       (lcd.DOWN  , 'I see fields\nof green'    , lcd.GREEN),
+       (lcd.RIGHT , 'Purple mountain\nmajesties', lcd.VIOLET),
+       (lcd.SELECT, ''                          , lcd.ON))
+prev = -1
+while True:
+    for b in btn:
+        if lcd.buttonPressed(b[0]):
+            if b is not prev:
+                lcd.clear()
+                lcd.message(b[1])
+                lcd.backlight(b[2])
+                prev = b
+            break
