@@ -9,7 +9,7 @@
 # LiquidCrystal - https://github.com/arduino/Arduino/blob/master/libraries/LiquidCrystal/LiquidCrystal.cpp
 
 from Adafruit_I2C import Adafruit_I2C
-
+from time import sleep
 
 class Adafruit_CharLCDPlate(Adafruit_I2C):
 
@@ -18,7 +18,7 @@ class Adafruit_CharLCDPlate(Adafruit_I2C):
 
     # Port expander registers
     MCP23017_IOCON_BANK0    = 0x0A  # IOCON when Bank 0 active
-    MCP23017_IOCON_BANK1    = 0x05  # IOCON when Bank 1 active
+    MCP23017_IOCON_BANK1    = 0x15  # IOCON when Bank 1 active
     # These are register addresses when in Bank 1 only:
     MCP23017_GPIOA          = 0x09
     MCP23017_IODIRB         = 0x10
@@ -263,6 +263,42 @@ class Adafruit_CharLCDPlate(Adafruit_I2C):
         self.clear()
 
 
+    # Puts the MCP23017 back in Bank 0 + sequential write mode so
+    # that other code using the 'classic' library can still work.
+    # Any code using this newer version of the library should
+    # consider adding an atexit() handler that calls this.
+    def stop(self):
+        self.porta = 0b11000000  # Turn off LEDs on the way out
+        self.portb = 0b00000001
+        sleep(0.0015)
+        self.i2c.bus.write_byte_data(
+          self.i2c.address, self.MCP23017_IOCON_BANK1, 0)
+        self.i2c.bus.write_i2c_block_data(
+          self.i2c.address, 0, 
+          [ 0b00111111,   # IODIRA
+            self.ddrb ,   # IODIRB
+            0b00000000,   # IPOLA
+            0b00000000,   # IPOLB
+            0b00000000,   # GPINTENA
+            0b00000000,   # GPINTENB
+            0b00000000,   # DEFVALA
+            0b00000000,   # DEFVALB
+            0b00000000,   # INTCONA
+            0b00000000,   # INTCONB
+            0b00000000,   # IOCON
+            0b00000000,   # IOCON
+            0b00111111,   # GPPUA
+            0b00000000,   # GPPUB
+            0b00000000,   # INTFA
+            0b00000000,   # INTFB
+            0b00000000,   # INTCAPA
+            0b00000000,   # INTCAPB
+            self.porta,   # GPIOA
+            self.portb,   # GPIOB
+            self.porta,   # OLATA
+            self.portb ]) # OLATB
+
+
     def clear(self):
         self.write(self.LCD_CLEARDISPLAY)
 
@@ -396,8 +432,6 @@ class Adafruit_CharLCDPlate(Adafruit_I2C):
     # Test code
 
 if __name__ == '__main__':
-
-    from time import sleep
 
     lcd = Adafruit_CharLCDPlate()
     lcd.begin(16, 2)
