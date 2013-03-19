@@ -424,8 +424,14 @@ class Adafruit_CharLCDPlate(Adafruit_I2C):
           self.i2c.address, self.MCP23017_GPIOB, self.portb)
 
 
+    # Read state of single button
     def buttonPressed(self, b):
         return (self.i2c.readU8(self.MCP23017_GPIOA) >> b) & 1
+
+
+    # Read and return bitmask of combined button state
+    def buttons(self):
+        return self.i2c.readU8(self.MCP23017_GPIOA) & 0b11111
 
 
     # ----------------------------------------------------------------------
