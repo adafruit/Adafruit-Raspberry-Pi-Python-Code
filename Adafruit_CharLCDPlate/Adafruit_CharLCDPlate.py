@@ -406,11 +406,11 @@ class Adafruit_CharLCDPlate(Adafruit_I2C):
 
     def message(self, text):
         """ Send string to LCD. Newline wraps to second line"""
-        lines = text.split('\n')   # Split at newline(s)
-        for line in lines:         # Render each substring...
-            self.write(line, True)
-            if len(lines) > 1:     # If newline(s),
-                self.write(0xC0)   # set DDRAM address to second line
+        lines = str(text).split('\n')    # Split at newline(s)
+        for i, line in enumerate(lines): # For each substring...
+            if i > 0:                    # If newline(s),
+                self.write(0xC0)         #  set DDRAM address to 2nd line
+            self.write(line, True)       # Issue substring
 
 
     def backlight(self, color):
