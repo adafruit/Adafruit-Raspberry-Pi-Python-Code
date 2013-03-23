@@ -362,9 +362,9 @@ class Adafruit_CharLCDPlate(Adafruit_I2C):
         self.write(self.LCD_DISPLAYCONTROL | self.displaycontrol)
 
 
-    def DisplayLeft(self):
+    def scrollDisplayLeft(self):
         """ These commands scroll the display without changing the RAM """
-        self.displayshift = self.LCD_DISPLAYMODE | self.LCD_MOVELEFT
+        self.displayshift = self.LCD_DISPLAYMOVE | self.LCD_MOVELEFT
         self.write(self.LCD_CURSORSHIFT | self.displayshift)
 
 
