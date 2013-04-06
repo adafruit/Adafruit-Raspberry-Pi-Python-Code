@@ -32,7 +32,7 @@ except:
 try:
   worksheet = gc.open(spreadsheet).sheet1
   # Alternatively, open a spreadsheet using the spreadsheet's key
-  # worksheet = gc.open_by_key('0BmgG6nO_6dprdS1MN3d3MkdPa142WFRrdnRRUWl1UFE')
+  # worksheet = gc.open_by_key('0BmgG6nO_6dprdS1MN3d3MkdPa142WFRrdnRRUWl1UFE').sheet1
 except:
   print "Unable to open the spreadsheet.  Check your filename: %s" % spreadsheet
   sys.exit()
