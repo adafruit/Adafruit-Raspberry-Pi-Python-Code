@@ -165,6 +165,7 @@ class BMP085 :
       UP = 23843
       self._cal_AC6 = 23153
       self._cal_AC5 = 32757
+      self._cal_MB = -32768;
       self._cal_MC = -8711
       self._cal_MD = 2868
       self._cal_B1 = 6190
@@ -197,6 +198,7 @@ class BMP085 :
       print "DBG: B6 = %d" % (B6)
       print "DBG: X1 = %d" % (X1)
       print "DBG: X2 = %d" % (X2)
+      print "DBG: X3 = %d" % (X3)
       print "DBG: B3 = %d" % (B3)
 
     X1 = (self._cal_AC3 * B6) >> 13
@@ -207,6 +209,7 @@ class BMP085 :
     if (self.debug):
       print "DBG: X1 = %d" % (X1)
       print "DBG: X2 = %d" % (X2)
+      print "DBG: X3 = %d" % (X3)
       print "DBG: B4 = %d" % (B4)
       print "DBG: B7 = %d" % (B7)
 
@@ -215,9 +218,12 @@ class BMP085 :
     else:
       p = (B7 / B4) * 2
 
+    if (self.debug):
+      print "DBG: X1 = %d" % (X1)
+      
     X1 = (p >> 8) * (p >> 8)
     X1 = (X1 * 3038) >> 16
-    X2 = (-7375 * p) >> 16
+    X2 = (-7357 * p) >> 16
     if (self.debug):
       print "DBG: p  = %d" % (p)
       print "DBG: X1 = %d" % (X1)
