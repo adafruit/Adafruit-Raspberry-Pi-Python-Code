@@ -124,7 +124,7 @@ class Adafruit_I2C :
         print "I2C: Device 0x%02X returned 0x%04X from reg 0x%02X" % (self.address, result & 0xFFFF, reg)
       return result
     except IOError, err:
-      return self.errMsg();
+      return self.errMsg()
 
   def readS16(self, reg):
     "Reads a signed 16-bit value from the I2C device"
@@ -136,7 +136,7 @@ class Adafruit_I2C :
         print "I2C: Device 0x%02X returned 0x%04X from reg 0x%02X" % (self.address, result & 0xFFFF, reg)
       return result
     except IOError, err:
-      return self.errMsg();
+      return self.errMsg()
 
   def readU16Rev(self, reg):
     "Reads an unsigned 16-bit value from the I2C device with rev byte order"
@@ -148,7 +148,7 @@ class Adafruit_I2C :
         print "I2C: Device 0x%02X returned 0x%04X from reg 0x%02X" % (self.address, result & 0xFFFF, reg)
       return result
     except IOError, err:
-      return self.errMsg();
+      return self.errMsg()
 
   def readS16Rev(self, reg):
     "Reads a signed 16-bit value from the I2C device with rev byte order"
@@ -160,7 +160,7 @@ class Adafruit_I2C :
         print "I2C: Device 0x%02X returned 0x%04X from reg 0x%02X" % (self.address, result & 0xFFFF, reg)
       return result
     except IOError, err:
-      return self.errMsg();
+      return self.errMsg()
 
 if __name__ == '__main__':
   try:
