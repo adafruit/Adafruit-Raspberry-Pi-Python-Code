@@ -117,26 +117,50 @@ class Adafruit_I2C :
   def readU16(self, reg):
     "Reads an unsigned 16-bit value from the I2C device"
     try:
-      result = self.bus.read_word_data(self.address, reg)
-      if self.debug:
-        print ("I2C: Device 0x%02X returned 0x%04X from reg 0x%02X" %
-         (self.address, result & 0xFFFF, reg))
+      hibyte = self.readU8(reg)
+      lobyte = self.readU8(reg+1)
+      result = (hibyte << 8) + lobyte
+      if (self.debug):
+        print "I2C: Device 0x%02X returned 0x%04X from reg 0x%02X" % (self.address, result & 0xFFFF, reg)
       return result
     except IOError, err:
-      return self.errMsg()
+      return self.errMsg();
 
   def readS16(self, reg):
     "Reads a signed 16-bit value from the I2C device"
     try:
-      result = self.bus.read_word_data(self.address, reg)
-      if result > 32767: result -= 65536
-      if self.debug:
-        print ("I2C: Device 0x%02X returned 0x%04X from reg 0x%02X" %
-         (self.address, result & 0xFFFF, reg))
+      hibyte = self.readS8(reg)
+      lobyte = self.readU8(reg+1)
+      result = (hibyte << 8) + lobyte
+      if (self.debug):
+        print "I2C: Device 0x%02X returned 0x%04X from reg 0x%02X" % (self.address, result & 0xFFFF, reg)
       return result
     except IOError, err:
-      return self.errMsg()
+      return self.errMsg();
 
+  def readU16Rev(self, reg):
+    "Reads an unsigned 16-bit value from the I2C device with rev byte order"
+    try:
+      lobyte = self.readU8(reg)
+      hibyte = self.readU8(reg+1)
+      result = (hibyte << 8) + lobyte
+      if (self.debug):
+        print "I2C: Device 0x%02X returned 0x%04X from reg 0x%02X" % (self.address, result & 0xFFFF, reg)
+      return result
+    except IOError, err:
+      return self.errMsg();
+
+  def readS16Rev(self, reg):
+    "Reads a signed 16-bit value from the I2C device with rev byte order"
+    try:
+      lobyte = self.readS8(reg)
+      hibyte = self.readU8(reg+1)
+      result = (hibyte << 8) + lobyte
+      if (self.debug):
+        print "I2C: Device 0x%02X returned 0x%04X from reg 0x%02X" % (self.address, result & 0xFFFF, reg)
+      return result
+    except IOError, err:
+      return self.errMsg();
 
 if __name__ == '__main__':
   try:
