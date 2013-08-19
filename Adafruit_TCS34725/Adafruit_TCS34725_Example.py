@@ -16,8 +16,8 @@ rgb = tcs.getRawData()
 colorTemp = tcs.calculateColorTemperature(rgb)
 lux = tcs.calculateLux(rgb)
 print rgb
-print colorTemp
-print lux
+print "Color Temperature: %d K" % colorTemp
+print "Luminosity: %d lux" % lux
 tcs.setInterrupt(True)
 sleep(1)
 tcs.disable()
