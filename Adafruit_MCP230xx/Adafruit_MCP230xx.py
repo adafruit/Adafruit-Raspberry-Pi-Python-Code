@@ -80,8 +80,9 @@ class Adafruit_MCP230XX(object):
         if self.num_gpios <= 8:
             return self._readandchangepin(MCP23008_GPPUA, pin, value)
         if self.num_gpios <= 16:
+            lvalue = self._readandchangepin(MCP23017_GPPUA, pin, value)
             if (pin < 8):
-                return self._readandchangepin(MCP23017_GPPUA, pin, value)
+                return 
             else:
                 return self._readandchangepin(MCP23017_GPPUB, pin-8, value) << 8
 
