@@ -63,19 +63,31 @@ class BMP085 :
     # Read the calibration data
     self.readCalibrationData()
 
+  def readS16(self, register):
+    "Reads a signed 16-bit value"
+    hi = self.i2c.readS8(register)
+    lo = self.i2c.readU8(register+1)
+    return (hi << 8) + lo
+
+  def readU16(self, register):
+    "Reads an unsigned 16-bit value"
+    hi = self.i2c.readU8(register)
+    lo = self.i2c.readU8(register+1)
+    return (hi << 8) + lo
+
   def readCalibrationData(self):
     "Reads the calibration data from the IC"
-    self._cal_AC1 = self.i2c.readS16(self.__BMP085_CAL_AC1)   # INT16
-    self._cal_AC2 = self.i2c.readS16(self.__BMP085_CAL_AC2)   # INT16
-    self._cal_AC3 = self.i2c.readS16(self.__BMP085_CAL_AC3)   # INT16
-    self._cal_AC4 = self.i2c.readU16(self.__BMP085_CAL_AC4)   # UINT16
-    self._cal_AC5 = self.i2c.readU16(self.__BMP085_CAL_AC5)   # UINT16
-    self._cal_AC6 = self.i2c.readU16(self.__BMP085_CAL_AC6)   # UINT16
-    self._cal_B1 = self.i2c.readS16(self.__BMP085_CAL_B1)     # INT16
-    self._cal_B2 = self.i2c.readS16(self.__BMP085_CAL_B2)     # INT16
-    self._cal_MB = self.i2c.readS16(self.__BMP085_CAL_MB)     # INT16
-    self._cal_MC = self.i2c.readS16(self.__BMP085_CAL_MC)     # INT16
-    self._cal_MD = self.i2c.readS16(self.__BMP085_CAL_MD)     # INT16
+    self._cal_AC1 = self.readS16(self.__BMP085_CAL_AC1)   # INT16
+    self._cal_AC2 = self.readS16(self.__BMP085_CAL_AC2)   # INT16
+    self._cal_AC3 = self.readS16(self.__BMP085_CAL_AC3)   # INT16
+    self._cal_AC4 = self.readU16(self.__BMP085_CAL_AC4)   # UINT16
+    self._cal_AC5 = self.readU16(self.__BMP085_CAL_AC5)   # UINT16
+    self._cal_AC6 = self.readU16(self.__BMP085_CAL_AC6)   # UINT16
+    self._cal_B1 = self.readS16(self.__BMP085_CAL_B1)     # INT16
+    self._cal_B2 = self.readS16(self.__BMP085_CAL_B2)     # INT16
+    self._cal_MB = self.readS16(self.__BMP085_CAL_MB)     # INT16
+    self._cal_MC = self.readS16(self.__BMP085_CAL_MC)     # INT16
+    self._cal_MD = self.readS16(self.__BMP085_CAL_MD)     # INT16
     if (self.debug):
       self.showCalibrationData()
 
@@ -97,7 +109,7 @@ class BMP085 :
     "Reads the raw (uncompensated) temperature from the sensor"
     self.i2c.write8(self.__BMP085_CONTROL, self.__BMP085_READTEMPCMD)
     time.sleep(0.005)  # Wait 5ms
-    raw = self.i2c.readU16(self.__BMP085_TEMPDATA)
+    raw = self.readU16(self.__BMP085_TEMPDATA)
     if (self.debug):
       print "DBG: Raw Temp: 0x%04X (%d)" % (raw & 0xFFFF, raw)
     return raw
