@@ -21,5 +21,5 @@ type = 22
 pin = 24
 
 dhtreader.init()
-print dhtreader(type, pin)
+print dhtreader.read(type, pin)
 ```
