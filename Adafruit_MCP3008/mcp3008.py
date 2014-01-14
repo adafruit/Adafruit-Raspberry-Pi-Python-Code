@@ -68,27 +68,35 @@ def readadc(adcnum, clockpin, mosipin, misopin, cspin):
 	adcout /= 2       # first bit is 'null' so drop it
 	return adcout
 	
-# change these as desired
-SPICLK = 18
-SPIMOSI = 17
-SPIMISO = 21
-SPICS = 22
+if __name__=='__main__':
 
-# set up the SPI interface pins 
-GPIO.setup(SPIMOSI, GPIO.OUT)
-GPIO.setup(SPIMISO, GPIO.IN)
-GPIO.setup(SPICLK, GPIO.OUT)
-GPIO.setup(SPICS, GPIO.OUT)
+	try:
+		# change these as desired
+		SPICLK = 18
+		SPIMISO = 21
+		SPIMOSI = 17
+		SPICS = 22
 
-# Note that bitbanging SPI is incredibly slow on the Pi as its not
-# a RTOS - reading the ADC takes about 30 ms (~30 samples per second)
-# which is awful for a microcontroller but better-than-nothing for Linux
+		# set up the SPI interface pins 
+		GPIO.setup(SPICLK, GPIO.OUT)
+		GPIO.setup(SPIMISO, GPIO.IN)
+		GPIO.setup(SPIMOSI, GPIO.OUT)
+		GPIO.setup(SPICS, GPIO.OUT)
 
-print "| #0 \t #1 \t #2 \t #3 \t #4 \t #5 \t #6 \t #7\t|"
-print "-----------------------------------------------------------------"
-while True:
-	print "|",
-	for adcnum in range(8):
-		ret = readadc(adcnum, SPICLK, SPIMOSI, SPIMISO, SPICS)
-		print ret,"\t",
-	print "|"
+		# Note that bitbanging SPI is incredibly slow on the Pi as its not
+		# a RTOS - reading the ADC takes about 30 ms (~30 samples per second)
+		# which is awful for a microcontroller but better-than-nothing for Linux
+
+		print "| #0 \t #1 \t #2 \t #3 \t #4 \t #5 \t #6 \t #7\t|"
+		print "-----------------------------------------------------------------"
+		while True:
+			print "|",
+			for adcnum in range(8):
+				ret = readadc(adcnum, SPICLK, SPIMOSI, SPIMISO, SPICS)
+				print ret,"\t",
+			print "|"
+        
+	except KeyboardInterrupt:
+		pass
+
+	GPIO.cleanup()
