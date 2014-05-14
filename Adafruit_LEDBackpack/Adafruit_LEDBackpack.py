@@ -27,8 +27,8 @@ class LEDBackpack:
               0x0000, 0x0000, 0x0000, 0x0000 ]
 
   # Constructor
-  def __init__(self, address=0x70, debug=False):
-    self.i2c = Adafruit_I2C(address)
+  def __init__(self, address=0x70, debug=False, bus=-1):
+    self.i2c = Adafruit_I2C(address, bus)
     self.address = address
     self.debug = debug
 
@@ -63,6 +63,12 @@ class LEDBackpack:
     self.__buffer[row] = value  # value # & 0xFFFF
     if (update):
       self.writeDisplay()       # Update the display
+
+  def getBufferRow(self, row):
+    "Returns a single 16-bit entry in the 8*16-bit buffer"
+    if (row > 7):
+      return
+    return self.__buffer[row]
 
   def getBuffer(self):
     "Returns a copy of the raw buffer contents"
