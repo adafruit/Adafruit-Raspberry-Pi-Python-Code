@@ -27,8 +27,8 @@ class LEDBackpack:
               0x0000, 0x0000, 0x0000, 0x0000 ]
 
   # Constructor
-  def __init__(self, address=0x70, debug=False, bus=-1):
-    self.i2c = Adafruit_I2C(address, bus)
+  def __init__(self, address=0x70, debug=False):
+    self.i2c = Adafruit_I2C(address)
     self.address = address
     self.debug = debug
 
