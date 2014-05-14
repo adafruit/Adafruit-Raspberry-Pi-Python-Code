@@ -8,7 +8,7 @@ from Adafruit_LEDBackpack import LEDBackpack
 # Bargraph Display
 # ===========================================================================
 
-# This class is meant to be used with the four-character, seven segment
+# This class is meant to be used with the 24-LED bicolor bargraph
 # displays available from Adafruit
 
 class Bargraph:
