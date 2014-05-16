@@ -105,7 +105,9 @@ int readDHT(int type, int pin) {
     }
     laststate = bcm2835_gpio_lev(pin);
     if (counter == 1000) break;
+#ifdef DEBUG
     bits[bitidx++] = counter;
+#endif
 
     if ((i>3) && (i%2 == 0)) {
       // shove each bit into the storage bytes
