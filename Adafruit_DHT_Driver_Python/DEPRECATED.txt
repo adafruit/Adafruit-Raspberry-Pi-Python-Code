@@ -1,0 +1,5 @@
+This Adafruit_DHT_Driver_Python code is deprecated and has been superseded by the Python 
+library at https://github.com/adafruit/Adafruit_Python_DHT  You can see the new library's C 
+code for interfacing with the DHT sensors on either a Raspberry Pi or Beaglebone Black in the
+source/Raspberry_Pi or source/Beaglebone_Black directory of the new library.  See more details
+on installing and using the library in the learning guide at: https://learn.adafruit.com/dht-humidity-sensing-on-raspberry-pi-with-gdocs-logging/overview
