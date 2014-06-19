@@ -132,7 +132,7 @@ class Adafruit_I2C :
   def readS16(self, reg, little_endian=True):
     "Reads a signed 16-bit value from the I2C device"
     try:
-      result = self.readU16(self.address,reg,little_endian)
+      result = self.readU16(reg,little_endian)
       if result > 32767: result -= 65536
       return result
     except IOError, err:
