@@ -115,20 +115,25 @@ class Adafruit_I2C :
     except IOError, err:
       return self.errMsg()
 
-  def readU16(self, reg):
+  def readU16(self, reg, little_endian=True):
     "Reads an unsigned 16-bit value from the I2C device"
     try:
       result = self.bus.read_word_data(self.address,reg)
+      # Swap bytes if using big endian because read_word_data assumes little 
+      # endian on ARM (little endian) systems.
+      if not little_endian:
+        result = ((result << 8) & 0xFF00) + (result >> 8)
       if (self.debug):
         print "I2C: Device 0x%02X returned 0x%04X from reg 0x%02X" % (self.address, result & 0xFFFF, reg)
       return result
     except IOError, err:
       return self.errMsg()
 
-  def readS16(self, reg):
+  def readS16(self, reg, little_endian=True):
     "Reads a signed 16-bit value from the I2C device"
     try:
-      result = self.bus.read_word_data(self.address,reg)
+      result = self.readU16(self.address,reg,little_endian)
+      if result > 32767: result -= 65536
       if (self.debug):
         print "I2C: Device 0x%02X returned 0x%04X from reg 0x%02X" % (self.address, result & 0xFFFF, reg)
       return result
