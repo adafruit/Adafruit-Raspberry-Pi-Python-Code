@@ -25,6 +25,7 @@ class PWM :
   __ALLLED_ON_H        = 0xFB
   __ALLLED_OFF_L       = 0xFC
   __ALLLED_OFF_H       = 0xFD
+  __SLEEP              = 0x10
 
   def __init__(self, address=0x40, debug=False):
     self.i2c = Adafruit_I2C(address)
@@ -34,6 +35,10 @@ class PWM :
     if (self.debug):
       print "Reseting PCA9685"
     self.i2c.bus.write_byte(0x00, 0x06)
+    mode1 = self.i2c.readU8(self.__MODE1)
+    mode1 = mode1 & ~self.__SLEEP                 # wake up (reset sleep)
+    self.i2c.write8(self.__MODE1, mode1)
+    time.sleep(0.005)                             # wait for oscillator
 
   def setPWMFreq(self, freq):
     "Sets the PWM frequency"
