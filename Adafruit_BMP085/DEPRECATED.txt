@@ -1,0 +1,5 @@
+This BMP085 sensor library has been deprecated in favor of a new version that supports both the Raspberry Pi and Beaglebone Black.
+
+You can find the new library with installation instructions at this github repository: https://github.com/adafruit/Adafruit_Python_BMP
+
+You can also find a tutorial on using this library at: https://learn.adafruit.com/using-the-bmp085-with-raspberry-pi/using-the-adafruit-bmp-python-library
