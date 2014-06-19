@@ -134,8 +134,6 @@ class Adafruit_I2C :
     try:
       result = self.readU16(self.address,reg,little_endian)
       if result > 32767: result -= 65536
-      if (self.debug):
-        print "I2C: Device 0x%02X returned 0x%04X from reg 0x%02X" % (self.address, result & 0xFFFF, reg)
       return result
     except IOError, err:
       return self.errMsg()
