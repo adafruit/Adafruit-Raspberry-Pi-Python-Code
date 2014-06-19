@@ -32,7 +32,7 @@ class PWM :
     self.debug = debug
     if (self.debug):
       print "Reseting PCA9685"
-    self.i2c.write8(self.__MODE1, 0x00)
+    self.i2c.bus.write_byte(0x00, 0x06)
 
   def setPWMFreq(self, freq):
     "Sets the PWM frequency"
