@@ -13,11 +13,12 @@ class Adafruit_I2C :
     "Gets the version number of the Raspberry Pi board"
     # Courtesy quick2wire-python-api
     # https://github.com/quick2wire/quick2wire-python-api
+    # Updated revision info from: http://elinux.org/RPi_HardwareHistory#Board_Revision_History
     try:
       with open('/proc/cpuinfo','r') as f:
         for line in f:
           if line.startswith('Revision'):
-            return 1 if line.rstrip()[-1] in ['1','2'] else 2
+            return 1 if line.rstrip()[-1] in ['2','3'] else 2
     except:
       return 0
 
@@ -114,22 +115,25 @@ class Adafruit_I2C :
     except IOError, err:
       return self.errMsg()
 
-  def readU16(self, reg):
+  def readU16(self, reg, little_endian=True):
     "Reads an unsigned 16-bit value from the I2C device"
     try:
       result = self.bus.read_word_data(self.address,reg)
+      # Swap bytes if using big endian because read_word_data assumes little 
+      # endian on ARM (little endian) systems.
+      if not little_endian:
+        result = ((result << 8) & 0xFF00) + (result >> 8)
       if (self.debug):
         print "I2C: Device 0x%02X returned 0x%04X from reg 0x%02X" % (self.address, result & 0xFFFF, reg)
       return result
     except IOError, err:
       return self.errMsg()
 
-  def readS16(self, reg):
+  def readS16(self, reg, little_endian=True):
     "Reads a signed 16-bit value from the I2C device"
     try:
-      result = self.bus.read_word_data(self.address,reg)
-      if (self.debug):
-        print "I2C: Device 0x%02X returned 0x%04X from reg 0x%02X" % (self.address, result & 0xFFFF, reg)
+      result = self.readU16(reg,little_endian)
+      if result > 32767: result -= 65536
       return result
     except IOError, err:
       return self.errMsg()
