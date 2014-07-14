@@ -11,6 +11,7 @@
 from Adafruit_I2C import Adafruit_I2C
 from time import sleep
 
+
 class Adafruit_CharLCDPlate(Adafruit_I2C):
 
     # ----------------------------------------------------------------------
@@ -72,6 +73,13 @@ class Adafruit_CharLCDPlate(Adafruit_I2C):
     LCD_MOVERIGHT   = 0x04
     LCD_MOVELEFT    = 0x00
 
+    # Line addresses for up to 4 line displays.  Maps line number to DDRAM address for line.
+    LINE_ADDRESSES = { 1: 0xC0, 2: 0x94, 3: 0xD4 }
+
+    # Truncation constants for message function truncate parameter.
+    NO_TRUNCATE       = 0
+    TRUNCATE          = 1
+    TRUNCATE_ELLIPSIS = 2
 
     # ----------------------------------------------------------------------
     # Constructor
@@ -265,6 +273,7 @@ class Adafruit_CharLCDPlate(Adafruit_I2C):
     def begin(self, cols, lines):
         self.currline = 0
         self.numlines = lines
+        self.numcols = cols
         self.clear()
 
 
@@ -409,13 +418,24 @@ class Adafruit_CharLCDPlate(Adafruit_I2C):
         self.write(self.LCD_SETDDRAMADDR)
 
 
-    def message(self, text):
+    def message(self, text, truncate=NO_TRUNCATE):
         """ Send string to LCD. Newline wraps to second line"""
         lines = str(text).split('\n')    # Split at newline(s)
         for i, line in enumerate(lines): # For each substring...
-            if i > 0:                    # If newline(s),
-                self.write(0xC0)         #  set DDRAM address to 2nd line
-            self.write(line, True)       # Issue substring
+            address = self.LINE_ADDRESSES.get(i, None)
+            if address is not None:      # If newline(s),
+                self.write(address)      #  set DDRAM address to line
+            # Handle appropriate truncation if requested.
+            linelen = len(line)
+            if truncate == self.TRUNCATE and linelen > self.numcols:
+                # Hard truncation of line.
+                self.write(line[0:self.numcols], True)
+            elif truncate == self.TRUNCATE_ELLIPSIS and linelen > self.numcols:
+                # Nicer truncation with ellipses.
+                self.write(line[0:self.numcols-3] + '...', True)
+            else:
+                self.write(line, True)
+
 
 
     def backlight(self, color):
