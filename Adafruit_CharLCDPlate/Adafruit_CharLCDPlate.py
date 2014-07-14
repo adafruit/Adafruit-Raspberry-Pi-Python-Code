@@ -76,13 +76,18 @@ class Adafruit_CharLCDPlate(Adafruit_I2C):
     # ----------------------------------------------------------------------
     # Constructor
 
-    def __init__(self, busnum=-1, addr=0x20, debug=False):
+    def __init__(self, busnum=-1, addr=0x20, debug=False, backlight=ON):
 
         self.i2c = Adafruit_I2C(addr, busnum, debug)
 
         # I2C is relatively slow.  MCP output port states are cached
         # so we don't need to constantly poll-and-change bit states.
         self.porta, self.portb, self.ddrb = 0, 0, 0b00010000
+
+        # Set initial backlight color.
+        c          = ~backlight
+        self.porta = (self.porta & 0b00111111) | ((c & 0b011) << 6)
+        self.portb = (self.portb & 0b11111110) | ((c & 0b100) >> 2)
 
         # Set MCP23017 IOCON register to Bank 0 with sequential operation.
         # If chip is already set for Bank 0, this will just write to OLATB,
@@ -116,8 +121,8 @@ class Adafruit_CharLCDPlate(Adafruit_I2C):
             0b00000000,   # INTCAPB
             self.porta,   # GPIOA
             self.portb,   # GPIOB
-            self.porta,   # OLATA     0 on all outputs; side effect of
-            self.portb ]) # OLATB     turning on R+G+B backlight LEDs.
+            self.porta,   # OLATA
+            self.portb ]) # OLATB
 
         # Switch to Bank 1 and disable sequential operation.
         # From this point forward, the register addresses do NOT match
