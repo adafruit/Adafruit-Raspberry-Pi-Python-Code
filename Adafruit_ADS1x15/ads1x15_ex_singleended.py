@@ -13,7 +13,7 @@ ADS1015 = 0x00  # 12-bit ADC
 ADS1115 = 0x01	# 16-bit ADC
 
 # Select the gain
-# gain = 61    # +/- 6.144V
+# gain = 6144  # +/- 6.144V
 gain = 4096  # +/- 4.096V
 # gain = 2048  # +/- 2.048V
 # gain = 1024  # +/- 1.024V
