@@ -94,7 +94,6 @@ class Adafruit_CharLCD:
 	if (lines > 1):
 		self.numlines = lines
     		self.displayfunction |= self.LCD_2LINE
-		self.currline = 0
 
 
     def home(self):
@@ -134,30 +133,30 @@ class Adafruit_CharLCD:
 
 
     def noCursor(self):
-	""" Turns the underline cursor on/off """
+	""" Turns the underline cursor off """
 
 	self.displaycontrol &= ~self.LCD_CURSORON
 	self.write4bits(self.LCD_DISPLAYCONTROL | self.displaycontrol)
 
 
     def cursor(self):
-	""" Cursor On """
+	""" Turns the underline cursor on """
 
 	self.displaycontrol |= self.LCD_CURSORON
 	self.write4bits(self.LCD_DISPLAYCONTROL | self.displaycontrol)
 
 
     def noBlink(self):
-	""" Turn on and off the blinking cursor """
+	""" Turn the blinking cursor off """
 
 	self.displaycontrol &= ~self.LCD_BLINKON
 	self.write4bits(self.LCD_DISPLAYCONTROL | self.displaycontrol)
 
 
-    def noBlink(self):
-	""" Turn on and off the blinking cursor """
+    def blink(self):
+	""" Turn the blinking cursor on """
 
-	self.displaycontrol &= ~self.LCD_BLINKON
+	self.displaycontrol |= self.LCD_BLINKON
 	self.write4bits(self.LCD_DISPLAYCONTROL | self.displaycontrol)
 
 
