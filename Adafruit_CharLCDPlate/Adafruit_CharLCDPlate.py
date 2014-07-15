@@ -90,7 +90,7 @@ class Adafruit_CharLCDPlate(Adafruit_I2C):
 
         # I2C is relatively slow.  MCP output port states are cached
         # so we don't need to constantly poll-and-change bit states.
-        self.porta, self.portb, self.ddrb = 0, 0, 0b00010000
+        self.porta, self.portb, self.ddrb = 0, 0, 0b00000010
 
         # Set initial backlight color.
         c          = ~backlight
@@ -200,7 +200,7 @@ class Adafruit_CharLCDPlate(Adafruit_I2C):
         """ Send command/data to LCD """
 
         # If pin D7 is in input state, poll LCD busy flag until clear.
-        if self.ddrb & 0b00010000:
+        if self.ddrb & 0b00000010:
             lo = (self.portb & 0b00000001) | 0b01000000
             hi = lo | 0b00100000 # E=1 (strobe)
             self.i2c.bus.write_byte_data(
@@ -217,7 +217,7 @@ class Adafruit_CharLCDPlate(Adafruit_I2C):
             self.portb = lo
 
             # Polling complete, change D7 pin to output
-            self.ddrb &= 0b11101111
+            self.ddrb &= 0b11111101
             self.i2c.bus.write_byte_data(self.i2c.address,
               self.MCP23017_IODIRB, self.ddrb)
 
@@ -262,7 +262,7 @@ class Adafruit_CharLCDPlate(Adafruit_I2C):
         # If a poll-worthy instruction was issued, reconfigure D7
         # pin as input to indicate need for polling on next call.
         if (not char_mode) and (value in self.pollables):
-            self.ddrb |= 0b00010000
+            self.ddrb |= 0b00000010
             self.i2c.bus.write_byte_data(self.i2c.address,
               self.MCP23017_IODIRB, self.ddrb)
 
