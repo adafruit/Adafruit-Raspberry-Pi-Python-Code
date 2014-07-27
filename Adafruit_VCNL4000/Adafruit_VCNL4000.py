@@ -51,4 +51,11 @@ class VCNL4000 :
         return self.i2c.readU16(VCNL4000_PROXIMITYDATA)
       time.sleep(0.001)
 
-
+  # Read data from ambient sensor  
+  def read_ambient(self):
+    self.i2c.write8(VCNL4000_COMMAND, VCNL4000_MEASUREAMBIENT)
+    while True:
+      result = self.i2c.readU8(VCNL4000_COMMAND)
+      if (result and VCNL4000_AMBIENTREADY):
+        return self.i2c.readU16(VCNL4000_AMBIENTDATA)
+      time.sleep(0.001)
