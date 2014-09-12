@@ -13,8 +13,11 @@ Adafruit's Raspberry-Pi Python Code Library
   BSD license, all text above and below must be included in any redistribution
   
   To download, we suggest logging into your Pi with Internet accessibility and typing:
-  git clone https://github.com/adafruit/Adafruit-Raspberry-Pi-Python-Code.git
   
+```bash
+git clone https://github.com/adafruit/Adafruit-Raspberry-Pi-Python-Code.git
+```
+
 ============
 Copyright (c) 2012-2013 Limor Fried, Kevin Townsend and Mikey Sklar for Adafruit Industries.
 All rights reserved.
