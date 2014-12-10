@@ -8,8 +8,9 @@ import time
 # ===========================================================================
 
 # Initialise the PWM device using the default address
-# bmp = PWM(0x40, debug=True)
-pwm = PWM(0x40, debug=True)
+pwm = PWM(0x40)
+# Note if you'd like more debug output you can instead run:
+#pwm = PWM(0x40, debug=True)
 
 servoMin = 150  # Min pulse length out of 4096
 servoMax = 600  # Max pulse length out of 4096
