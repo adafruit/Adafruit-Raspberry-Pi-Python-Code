@@ -196,9 +196,17 @@ class TCS34725:
         Y = (-0.32466 * rgb['r']) + (1.57837 * rgb['g']) + (-0.73191 * rgb['b'])
         Z = (-0.68202 * rgb['r']) + (0.77073 * rgb['g']) + ( 0.56332 * rgb['b'])
 
+        # Check for divide by 0 (total darkness) and return None.
+        if (x + y + z) == 0:
+            return None
+
         # 2. Calculate the chromaticity co-ordinates
         xc = (X) / (X + Y + Z)
         yc = (Y) / (X + Y + Z)
+
+        # Check for divide by 0 again and return None.
+        if (0.1858 - yc) == 0:
+            return None
 
         # 3. Use McCamy's formula to determine the CCT
         n = (xc - 0.3320) / (0.1858 - yc)
