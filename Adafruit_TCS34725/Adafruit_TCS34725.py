@@ -197,7 +197,7 @@ class TCS34725:
         Z = (-0.68202 * rgb['r']) + (0.77073 * rgb['g']) + ( 0.56332 * rgb['b'])
 
         # Check for divide by 0 (total darkness) and return None.
-        if (x + y + z) == 0:
+        if (X + Y + Z) == 0:
             return None
 
         # 2. Calculate the chromaticity co-ordinates
