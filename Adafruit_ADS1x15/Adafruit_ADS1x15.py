@@ -289,7 +289,11 @@ class ADS1x15:
     result = self.i2c.readList(self.__ADS1015_REG_POINTER_CONVERT, 2)
     if (self.ic == self.__IC_ADS1015):
     	# Shift right 4 bits for the 12-bit ADS1015 and convert to mV
-    	return ( ((result[0] << 8) | (result[1] & 0xFF)) >> 4 )*pga/2048.0
+	val = ((result[0] << 8) | (result[1] & 0xFF)) >> 4
+	# (Take signed values into account as well)
+	if val >> 11:
+		val = val - 0xfff
+    	return val*pga/2048.0
     else:
 	# Return a mV value for the ADS1115
 	# (Take signed values into account as well)
