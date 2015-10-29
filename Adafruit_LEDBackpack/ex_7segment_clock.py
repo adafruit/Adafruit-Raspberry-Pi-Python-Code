@@ -25,5 +25,5 @@ while(True):
   segment.writeDigit(4, minute % 10)        # Ones
   # Toggle colon
   segment.setColon(second % 2)              # Toggle colon at 1Hz
-  # Wait one second
-  time.sleep(1)
+  # Wait a quarter second (less than 1 second to prevent colon blinking getting in phase with odd/even seconds).
+  time.sleep(0.25)
