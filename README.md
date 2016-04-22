@@ -12,7 +12,16 @@ loaded all of these repositories on the [Python package index](https://pypi.pyth
 so they can be installed with `pip` (note that pip won't install example code so for most users
 it's recommended to install from source).
 
-In addition **all** of the Python libraries below support **both** Python 2.7 and Python 3.x!
+In addition **all** of the Python libraries below support **both** Python 2.7 and Python 3.x!  Note
+if you do plan to use Python 3 it has totally separate libraries from Python 2 so you might
+need to install all the libraries you use in **both** Python 2 and 3.  See this video stream
+for more details: https://www.youtube.com/watch?v=rRFG32EebNc  In particular on a Raspberry Pi
+you probably want to install Python 3, PIP for Python 3, and the RPi.GPIO library (used
+to talk to GPIO pins on the Pi) with these commands:
+
+    sudo apt-get update
+    sudo apt-get install -y python3 python3-pip python-dev
+    sudo pip3 install rpi.gpio
 
 ## Where do I find the new Raspberry Pi Python code?
 
